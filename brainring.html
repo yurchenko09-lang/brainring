@@ -1,0 +1,1194 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Брейн-ринг онлайн</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,500&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --paper: #EEF1EA; --card: #FBFBF7; --ink: #202A22; --ink-muted: #5B6459; --line: #D7DBCC;
+    --btn-bg: #202A22; --btn-fg: #F4F6EF;
+    --truth: #3F7D58; --myth: #A8443B; --accent: #2E6E8E; --gold: #B8860B;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper: #13170F; --card: #1D2318; --ink: #E8ECE0; --ink-muted: #9AA391; --line: #2B3226;
+      --btn-bg: #E8ECE0; --btn-fg: #13170F; --truth: #70C08D; --myth: #E08579; --accent: #7CB8D9; --gold: #D8AE4E;
+    }
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink);
+    font-family: 'Source Sans 3', system-ui, sans-serif; display: flex; flex-direction: column;
+  }
+  .wrap{ max-width: 1200px; margin: 0 auto; padding: 1.5rem; width: 100%; flex: 1; display: flex; flex-direction: column; }
+  .wrap.narrow{ max-width: 480px; }
+  h1{ font-family: 'Fraunces', serif; font-weight: 700; text-align: center; margin: 0 0 1.2rem; font-size: clamp(1.4rem, 4vw, 2.2rem); }
+
+  /* --- shared --- */
+  .card{ background: var(--card); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 1.4rem; }
+  .center{ text-align: center; }
+  .muted{ color: var(--ink-muted); }
+  input[type=password], input[type=text], input[type=number], select{
+    font-family: 'IBM Plex Mono', monospace; font-size: 1rem; padding: 0.6rem 0.8rem; border-radius: 4px;
+    border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+  }
+  input[type=password]{ width: 8rem; text-align: center; }
+  input[type=number]{ width: 6rem; text-align: center; }
+  button{ font-family: 'IBM Plex Mono', monospace; cursor: pointer; border: none; border-radius: 6px; }
+  .btn{ background: var(--btn-bg); color: var(--btn-fg); padding: 0.7rem 1.3rem; font-size: 0.95rem; letter-spacing: 0.03em; text-transform: uppercase; }
+  .btn.ghost{ background: transparent; color: var(--ink-muted); border: 1px solid var(--line); }
+  .btn.danger{ background: var(--myth); color: #fff; }
+  .btn.gold{ background: var(--gold); color: #2a1e00; }
+  .btn:disabled{ opacity: 0.4; cursor: default; }
+  .btn.small{ padding: 0.4rem 0.7rem; font-size: 0.7rem; }
+
+  /* --- registration --- */
+  .reg-form{ display: flex; flex-direction: column; gap: 0.8rem; text-align: left; }
+  .reg-form label{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; color: var(--ink-muted); letter-spacing: 0.05em; display: block; margin-bottom: 0.3rem; }
+  .reg-form select, .reg-form input[type=text]{ width: 100%; font-size: 1.05rem; padding: 0.65rem 0.7rem; }
+  .whoami{ text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--ink-muted); margin-bottom: 1rem; }
+  .whoami .switch-link{ color: var(--accent); text-decoration: underline; }
+  .status-text{ text-align: center; font-family: 'Fraunces', serif; font-style: italic; font-size: 1.15rem; margin: 1.5rem 0; }
+
+  /* --- captain/team pick --- */
+  .pick-list{ display: flex; flex-direction: column; gap: 0.7rem; margin-top: 1rem; }
+  .pick-btn{ display:block; width:100%; padding: 1rem; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-family:'Fraunces',serif; font-weight:600; font-size: 1.1rem; color: var(--ink); text-align:center; }
+  .pick-btn:active{ transform: scale(0.98); }
+  .team-banner{ text-align:center; font-family:'Fraunces',serif; font-weight:700; font-size:1.3rem; margin: 0.5rem 0 1rem; }
+
+  /* --- captain game controls --- */
+  .br-buzz-btn{ display:block; width:100%; padding: 2.4rem 1rem; font-family:'Fraunces',serif; font-weight:700; font-size: clamp(1.6rem,8vw,2.4rem); border-radius: 14px; margin: 1rem 0; color:#fff; background: var(--myth); transition: transform 0.1s; }
+  .br-buzz-btn:active{ transform: scale(0.97); }
+  .br-spin-btn{ display:block; width:100%; padding: 2.4rem 1rem; font-family:'Fraunces',serif; font-weight:700; font-size: clamp(1.6rem,8vw,2.4rem); border-radius: 14px; margin: 1rem 0; color:#fff; background: var(--accent); transition: transform 0.1s; }
+  .br-spin-btn:active{ transform: scale(0.97); }
+  .br-question-box{ font-family:'Fraunces',serif; font-weight:600; font-size: 1.25rem; text-align:center; margin: 1rem 0; line-height:1.4; }
+  .br-mini-score{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:0.85rem; color:var(--ink-muted); margin-bottom: 0.6rem; }
+
+  /* --- TV / projector --- */
+  .join{ display: flex; align-items: center; gap: 1.2rem; justify-content: center; margin-top: 1.2rem; flex-wrap: wrap; }
+  .join img{ border-radius: 8px; border: 1px solid var(--line); }
+  .join .link{ font-family: 'IBM Plex Mono', monospace; font-size: 1rem; word-break: break-all; }
+  .join .copy-link-btn{ margin-top: 0.5rem; font-size: 0.78rem; padding: 0.5rem 0.8rem; }
+  .start-screen, .end-screen{ text-align: center; padding: 2rem 1rem; }
+  .br-live-count{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:0.95rem; color:var(--ink-muted); margin: 1rem 0; }
+
+  .br-tables{ display:flex; flex-wrap:wrap; gap: 1rem; justify-content:center; margin: 1.3rem 0; }
+  .br-team-card{ border: 2px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; min-width: 180px; background: var(--card); text-align:center; }
+  .br-team-card.active-spin{ border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .br-team-card.active-buzz{ border-color: var(--myth); box-shadow: 0 0 0 3px color-mix(in srgb, var(--myth) 30%, transparent); }
+  .br-team-card.tried-out{ opacity: 0.45; }
+  .br-team-card.judged-correct{ border-color: var(--truth); }
+  .br-team-name{ font-family:'Fraunces',serif; font-weight:700; font-size: 1.15rem; margin-bottom: 0.2rem; }
+  .br-team-score{ font-family:'IBM Plex Mono',monospace; font-size: 1.6rem; font-weight:700; margin: 0.3rem 0; }
+  .br-team-members{ font-size: 0.78rem; color: var(--ink-muted); line-height:1.5; min-height: 1.2em; }
+  .br-team-members .cap-tag{ color: var(--accent); font-weight:600; }
+
+  .br-stage{ text-align:center; padding: 1.5rem 0; }
+  .br-qcount{ font-family:'IBM Plex Mono',monospace; font-size:0.85rem; color:var(--ink-muted); text-align:center; margin-bottom: 0.6rem; }
+  .br-spin-anim{ font-size: 3.4rem; display:inline-block; animation: br-spin 0.5s linear infinite; }
+  @keyframes br-spin{ from{ transform: rotate(0deg); } to{ transform: rotate(360deg); } }
+  .br-blackbox{ display:inline-block; background:#15140F; color:#F4D98B; border-radius: 12px; padding: 1.2rem 1.6rem; font-family:'Fraunces',serif; font-weight:700; font-size: 1.6rem; }
+  .br-waiting-whoanswer{ font-family:'IBM Plex Mono',monospace; font-size:1rem; color: var(--ink-muted); margin-top: 0.6rem; }
+  .br-answerer{ font-family:'Fraunces',serif; font-weight:700; font-size: 1.5rem; margin: 0.8rem 0; }
+  .br-judge-banner{ text-align:center; font-family:'Fraunces',serif; font-weight:700; font-size:1.6rem; padding:1rem; border-radius:10px; margin: 1rem 0; }
+  .br-judge-banner.correct{ background: color-mix(in srgb, var(--truth) 20%, transparent); color: var(--truth); }
+  .br-judge-banner.wrong{ background: color-mix(in srgb, var(--myth) 20%, transparent); color: var(--myth); }
+
+  table.stats{ width: 100%; border-collapse: collapse; font-size: 1rem; margin-top: 1rem; }
+  table.stats th, table.stats td{ padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--line); text-align: left; }
+  table.stats th{ font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); }
+  table.stats td.num{ text-align: center; font-variant-numeric: tabular-nums; font-family: 'IBM Plex Mono', monospace; font-weight:700; }
+  table.stats td.rank{ font-family: 'IBM Plex Mono', monospace; color: var(--ink-muted); text-align: center; width: 2rem; }
+  table.stats tr.top1 td.rank{ color: var(--gold); font-weight: 700; }
+
+  /* --- admin --- */
+  .admin-wrap #content{ text-align: left; }
+  .admin-back{ font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; display: inline-block; margin-bottom: 1rem; color: var(--accent); text-decoration: underline; }
+  .admin-error{ background: color-mix(in srgb, var(--myth) 15%, transparent); border: 1px solid var(--myth); color: var(--myth); border-radius: 6px; padding: 0.7rem 0.9rem; margin-bottom: 1rem; font-size: 0.88rem; }
+  .admin-section{ background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.3rem; margin-bottom: 1.1rem; }
+  .admin-section h2{ font-family:'Fraunces',serif; font-size: 1.15rem; margin: 0 0 0.8rem; }
+  .admin-toolbar{ display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .admin-count{ font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; color: var(--ink-muted); margin: 0; }
+  #admin-search{ flex: 1; min-width: 200px; max-width: 320px; width: auto; }
+  details.admin-add, details.admin-import{ background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 0.8rem; }
+  details.admin-add summary, details.admin-import summary{ cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); }
+  .admin-add-form{ margin-top: 0.7rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .admin-add-row{ display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  .admin-add-row input[type=text]{ flex: 1; min-width: 160px; width: auto; }
+  textarea{
+    font-family: 'Source Sans 3', sans-serif; font-size: 0.95rem; padding: 0.5rem 0.6rem; border-radius: 4px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; resize: vertical;
+  }
+  .admin-import-body{ margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start; }
+  .admin-import-body code{ background: var(--card); padding: 0 0.3rem; border-radius: 3px; }
+  #sample-csv-link{ font-size: 0.8rem; color: var(--accent); text-decoration: underline; }
+  .admin-table-wrap{ overflow-x: auto; }
+  table.admin-table{ width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.admin-table th, table.admin-table td{ padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  table.admin-table th{ font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); }
+  table.admin-table td.admin-cell-text{ max-width: 24rem; }
+  table.admin-table td.admin-cell-answer{ white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; }
+  table.admin-table td.admin-cell-active{ text-align: center; }
+  table.admin-table td.admin-cell-actions{ white-space: nowrap; }
+  table.admin-table tr.inactive-row td.admin-cell-text, table.admin-table tr.inactive-row td.admin-cell-explain{ color: var(--ink-muted); }
+
+  .admin-captain-list{ display:flex; flex-direction:column; gap:0.4rem; max-height: 50vh; overflow-y:auto; margin-bottom: 0.8rem; }
+  .admin-captain-row{ display:flex; align-items:center; gap:0.6rem; padding:0.35rem 0.5rem; border-radius:6px; }
+  .admin-captain-row:hover{ background: var(--paper); }
+  .admin-teams-grid{ display:flex; flex-wrap:wrap; gap: 0.9rem; }
+  .admin-team-box{ border:1px solid var(--line); border-radius:8px; padding:0.7rem 0.9rem; min-width: 170px; background: var(--paper); }
+  .admin-team-box h3{ margin:0 0 0.3rem; font-family:'Fraunces',serif; font-size: 1rem; }
+  .admin-team-box ul{ margin: 0.3rem 0 0; padding-left: 1.1rem; font-size: 0.85rem; }
+  .admin-current-q{ font-family:'Fraunces',serif; font-weight:600; font-size: 1.2rem; text-align:center; margin: 0.6rem 0; }
+  .admin-judge-row{ display:flex; gap:0.8rem; justify-content:center; margin: 1rem 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app-wrap">
+  <h1>Брейн-ринг онлайн</h1>
+  <div id="content" class="card center">Завантаження…</div>
+</div>
+
+<script>
+(function(){
+  // Власна, окрема від bzd/zemlya/prapory Firebase Realtime Database.
+  var BASE = 'https://brainring-6ab9e-default-rtdb.europe-west1.firebasedatabase.app';
+  var META_URL = BASE + '/brainring/meta.json';
+  var STUDENTS_URL = BASE + '/brainring/students.json';
+  var TEAMS_URL = BASE + '/brainring/teams.json';
+  var QUESTIONS_URL = BASE + '/brainring/questions.json';
+  var BUZZES_URL = BASE + '/brainring/buzzes.json';
+  var studentUrl = function(id){ return BASE + '/brainring/students/' + id + '.json'; };
+  var teamUrl = function(id){ return BASE + '/brainring/teams/' + id + '.json'; };
+  var teamScoreUrl = function(id){ return BASE + '/brainring/teams/' + id + '/score.json'; };
+  var questionUrl = function(id){ return BASE + '/brainring/questions/' + id + '.json'; };
+  var buzzesForRoundUrl = function(rk){ return BASE + '/brainring/buzzes/' + enc(rk) + '.json'; };
+  var buzzEntryUrl = function(rk, teamId){ return BASE + '/brainring/buzzes/' + enc(rk) + '/' + teamId + '.json'; };
+  var STUDENT_URL = location.origin + location.pathname;
+  var PIN = '25';
+  var SPIN_MS = 2500;
+
+  var isTv = new URLSearchParams(location.search).has('tv');
+  var isAdmin = new URLSearchParams(location.search).has('admin');
+  var content = document.getElementById('content');
+  var appWrap = document.getElementById('app-wrap');
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  // Firebase-ключі не можуть містити крапки, слеші, #, $, [, ] — roundKey будуємо
+  // лише з безпечних символів (gameId з uid() та номер питання), тож enc() тут просто
+  // прибирає ':' на '_' про всяк випадок при використанні ключа як частини URL-шляху.
+  function enc(s){ return String(s).replace(/[^A-Za-z0-9_-]/g, '_'); }
+  function uid(){ return 's-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function tid(){ return 't-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function qid(){ return 'rq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function gid(){ return 'g-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // Повертає розпарсений JSON, або undefined якщо запит НЕ ВДАВСЯ (мережа/сервер) —
+  // цю різницю важливо не плутати з "шлях справді порожній" (null).
+  async function getJson(url){
+    try {
+      var r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) return undefined;
+      return await r.json();
+    } catch (e) { return undefined; }
+  }
+  async function putJson(url, data){
+    try { var r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); return r.ok; } catch (e) { return false; }
+  }
+  async function patchJson(url, data){
+    try { var r = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); return r.ok; } catch (e) { return false; }
+  }
+  async function delJson(url){
+    try { var r = await fetch(url, { method: 'DELETE' }); return r.ok; } catch (e) { return false; }
+  }
+
+  // Якщо /brainring/meta ще зовсім порожній (найперший запуск або після "Нова гра"),
+  // ініціалізуємо його лобі-станом з новим gameId. Викликають і TV, і адмінка —
+  // обидва лише ЧИТАЮТЬ перед записом і пишуть лише коли справді порожньо, тож навіть
+  // якщо обидва зроблять це одночасно при самому першому відкритті (коли ще жодного
+  // учня не зареєстровано і втрачати нічого), це нешкідливо.
+  async function ensureGameInitialized(){
+    var existing = await getJson(META_URL);
+    if (existing === undefined) return undefined;
+    if (!existing || !existing.phase) {
+      var fresh = { phase: 'lobby', gameId: gid(), teamCount: 0, currentIndex: 0, roundState: 'idle' };
+      await putJson(META_URL, fresh);
+      return fresh;
+    }
+    return existing;
+  }
+
+  // Пропонує кількість команд за кількістю зареєстрованих: намагається поділити
+  // рівно на команди по 5, потім по 4, 6, 3, 7 осіб (у такому порядку пріоритету);
+  // якщо рівно не ділиться жодним з варіантів — просто округлює до команд по ~5.
+  function suggestTeamCount(n){
+    if (!n || n < 2) return 1;
+    var sizes = [5, 4, 6, 3, 7];
+    for (var i = 0; i < sizes.length; i++) { if (n % sizes[i] === 0) return n / sizes[i]; }
+    return Math.max(1, Math.round(n / 5));
+  }
+
+  // Текст банера після суддівства — три можливі підсумки питання:
+  // хтось відповів правильно; всі, хто міг спробувати, відповіли невірно
+  // (класична передача ходу далі по черзі нікого не привела до успіху);
+  // або вчитель вручну пропустив питання без відповіді взагалі.
+  function judgementBannerHtml(lastJudgement){
+    if (lastJudgement === 'correct') return '<div class="br-judge-banner correct">Правильно! ✓</div>';
+    if (lastJudgement === 'skipped') return '<div class="br-judge-banner wrong">Питання пропущено</div>';
+    return '<div class="br-judge-banner wrong">Ніхто не відповів правильно ✗</div>';
+  }
+
+  // Повертає n унікальних випадкових елементів зі списку list (без мутації list).
+  function randomOrder(list, n){
+    var idxs = list.map(function(_, i){ return i; });
+    for (var i = idxs.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = idxs[i]; idxs[i] = idxs[j]; idxs[j] = tmp;
+    }
+    return idxs.slice(0, Math.min(n, idxs.length)).map(function(i){ return list[i]; });
+  }
+
+  /* ================= SHARED GAME DRIVER ================= */
+  // roundKey унікальний для кожного питання кожної гри (gameId не повторюється,
+  // currentIndex завжди зростає в межах однієї гри) — під ним у /buzzes кожен
+  // капітан пише лише СВІЙ власний ключ (teamId), тож перегони капітанів ніколи
+  // не затирають одна одну, а переможець обчислюється як мінімальний "at" серед
+  // записаних спроб — однаково на будь-якому клієнті, без потреби в транзакціях.
+  function brRoundKey(meta){ return meta.gameId + ':' + meta.currentIndex; }
+
+  // Хто крутитиме барабан на НАСТУПНОМУ питанні (більше не перегони — право
+  // крутити барабан має РІВНО одна команда):
+  // • на першому питанні гри — випадкова команда;
+  // • якщо попереднє питання хтось виграв (відповів правильно) — саме ця команда;
+  // • якщо не виграв ніхто (всі відповіли невірно або питання пропущено) —
+  //   випадкова команда з тих, хто ще не крутив у поточному "колі" (а коли всі
+  //   вже крутили — коло починається знову, щоб право переходило по черзі).
+  function pickNextSpinner(opts){
+    var teamIds = opts.teamIds || [];
+    if (!teamIds.length) return { spinnerId: null, spunTeamIds: [] };
+    if (opts.isFirstQuestion) {
+      var pick = teamIds[Math.floor(Math.random() * teamIds.length)];
+      return { spinnerId: pick, spunTeamIds: [pick] };
+    }
+    if (opts.prevWinnerTeamId && teamIds.indexOf(opts.prevWinnerTeamId) !== -1) {
+      var spunW = (opts.spunTeamIds || []).slice();
+      if (spunW.indexOf(opts.prevWinnerTeamId) === -1) spunW.push(opts.prevWinnerTeamId);
+      if (spunW.length >= teamIds.length) spunW = [opts.prevWinnerTeamId]; // всі вже крутили — нове коло
+      return { spinnerId: opts.prevWinnerTeamId, spunTeamIds: spunW };
+    }
+    var already = opts.spunTeamIds || [];
+    var remaining = teamIds.filter(function(id){ return already.indexOf(id) === -1; });
+    var pool = remaining.length ? remaining : teamIds.slice(); // всі вже крутили цього кола — почати нове
+    var pick2 = pool[Math.floor(Math.random() * pool.length)];
+    var spun2 = (remaining.length ? already.slice() : []);
+    spun2.push(pick2);
+    return { spinnerId: pick2, spunTeamIds: spun2 };
+  }
+
+  // Виконують і TV, і адмінка (бажано тримати обидві відкритими під час гри) —
+  // просуває spinning -> revealed, і revealed -> buzzed (перегони на кнопку
+  // "відповідаємо", за винятком команд, які вже невдало відповідали на ЦЕ
+  // питання — triedTeamIds). Перед кожним записом переходу повторно читає meta,
+  // щоб не продублювати перехід, який інший клієнт устиг виконати першим.
+  async function runDriverTick(meta){
+    if (!meta || meta.phase !== 'playing') return;
+    var rk = brRoundKey(meta);
+    if (meta.roundState === 'spinning') {
+      if (meta.revealedAt && Date.now() >= meta.revealedAt) {
+        var fresh2 = await getJson(META_URL);
+        if (fresh2 && fresh2.roundState === 'spinning' && brRoundKey(fresh2) === rk) {
+          await patchJson(META_URL, { roundState: 'revealed' });
+        }
+      }
+    } else if (meta.roundState === 'revealed') {
+      var buzzes = await getJson(buzzesForRoundUrl(rk));
+      if (buzzes && Object.keys(buzzes).length) {
+        var tried = meta.triedTeamIds || [];
+        var bWinner = null, bBest = Infinity;
+        Object.keys(buzzes).forEach(function(tId){
+          if (tried.indexOf(tId) !== -1) return; // вже невдало відповідала на це питання — поза грою до наступного питання
+          var at = buzzes[tId] && buzzes[tId].at;
+          if (typeof at === 'number' && at < bBest) { bBest = at; bWinner = tId; }
+        });
+        if (bWinner) {
+          var fresh3 = await getJson(META_URL);
+          if (fresh3 && fresh3.roundState === 'revealed' && brRoundKey(fresh3) === rk) {
+            await patchJson(META_URL, { roundState: 'buzzed', buzzedTeamId: bWinner, buzzedAt: Date.now() });
+          }
+        }
+      }
+    }
+  }
+
+  /* ================= PLAYER VIEW ================= */
+  function playerInit(){
+    appWrap.className = 'wrap narrow';
+    var myId = null, myGroup = null, myName = null;
+    try {
+      myId = localStorage.getItem('br-student-id');
+      myGroup = localStorage.getItem('br-student-group');
+      myName = localStorage.getItem('br-student-name');
+    } catch (e) {}
+
+    var myGameId = null;
+    try { myGameId = localStorage.getItem('br-game-id'); } catch(e){}
+
+    function clearRegistration(){
+      try {
+        localStorage.removeItem('br-student-id');
+        localStorage.removeItem('br-student-group');
+        localStorage.removeItem('br-student-name');
+      } catch(e){}
+      myId = null; myGroup = null; myName = null;
+    }
+
+    function syncGameId(gameId){
+      if (!gameId || gameId === myGameId) return;
+      var isNewRound = myGameId !== null;
+      try { localStorage.setItem('br-game-id', gameId); } catch(e){}
+      myGameId = gameId;
+      if (isNewRound) { clearRegistration(); location.reload(); }
+    }
+
+    function whoamiHtml(){ return '<p class="whoami">' + esc(myGroup) + ' · ' + esc(myName) + ' · <a href="#" id="switch-student" class="switch-link">не я?</a></p>'; }
+    function bindSwitchLink(){
+      var link = document.getElementById('switch-student');
+      if (!link) return;
+      link.addEventListener('click', function(e){
+        e.preventDefault();
+        try { localStorage.removeItem('br-student-id'); localStorage.removeItem('br-student-group'); localStorage.removeItem('br-student-name'); } catch(err){}
+        location.reload();
+      });
+    }
+
+    function showRegistration(){
+      content.innerHTML = '<form class="reg-form" id="reg-form">' +
+        '<div><label>Група</label><input type="text" id="reg-group" placeholder="Наприклад, 101" required></div>' +
+        '<div><label>ПІБ (повністю)</label><input type="text" id="reg-name" placeholder="Прізвище Ім’я По батькові" required></div>' +
+        '<button class="btn" type="submit">Приєднатись</button>' +
+        '</form>';
+      document.getElementById('reg-form').addEventListener('submit', async function(e){
+        e.preventDefault();
+        var group = document.getElementById('reg-group').value.trim();
+        var name = document.getElementById('reg-name').value.trim();
+        if (!group || !name) return;
+        myId = uid(); myGroup = group; myName = name;
+        var meta = await ensureGameInitialized();
+        if (meta && meta.gameId) myGameId = meta.gameId;
+        try {
+          localStorage.setItem('br-student-id', myId);
+          localStorage.setItem('br-student-group', myGroup);
+          localStorage.setItem('br-student-name', myName);
+          if (myGameId) localStorage.setItem('br-game-id', myGameId);
+        } catch (err) {}
+        content.innerHTML = '<p class="status-text">Приєднуємось...</p>';
+        await putJson(studentUrl(myId), { group: myGroup, name: myName, role: null, teamId: null, joinedAt: Date.now() });
+        startLoop();
+      });
+    }
+
+    var lastKey = null;
+    var polling = false;
+
+    function teamPickerHtml(teams){
+      if (!teams.length) return '<p class="status-text">Очікуємо, поки викладач призначить капітанів команд...</p>';
+      var html = '<p class="status-text">Обери команду свого капітана:</p><div class="pick-list">';
+      teams.forEach(function(t){
+        html += '<button class="pick-btn" data-team="' + esc(t.id) + '">' + esc(t.name) + '</button>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    async function render(meta, me, teams, students){
+      if (!meta) { content.innerHTML = whoamiHtml() + '<p class="status-text">Завантаження...</p>'; bindSwitchLink(); return; }
+
+      if (meta.phase === 'lobby') {
+        content.innerHTML = whoamiHtml() + '<p class="status-text">Зареєстровано! Очікуємо, поки викладач сформує команди...</p>';
+        bindSwitchLink();
+        return;
+      }
+
+      if (meta.phase === 'teams') {
+        var html = whoamiHtml();
+        if (!me || !me.teamId) {
+          html += teamPickerHtml(teams);
+        } else {
+          var myTeam = teams.filter(function(t){ return t.id === me.teamId; })[0];
+          html += '<div class="team-banner">' + (me.role === 'captain' ? 'Ви КАПІТАН команди «' + esc(myTeam ? myTeam.name : '') + '»' : 'Ваша команда: «' + esc(myTeam ? myTeam.name : '') + '»') + '</div>';
+          var mates = students.filter(function(s){ return s.teamId === me.teamId; });
+          html += '<p class="muted center">Склад (' + mates.length + '): ' + mates.map(function(s){ return esc(s.name) + (s.role==='captain' ? ' (капітан)' : ''); }).join(', ') + '</p>';
+          html += '<p class="status-text">Очікуємо початку гри...</p>';
+          if (me.role !== 'captain') html += '<p class="center"><a href="#" id="change-team-link" class="switch-link">обрати іншу команду</a></p>';
+        }
+        content.innerHTML = html;
+        bindSwitchLink();
+        var changeLink = document.getElementById('change-team-link');
+        if (changeLink) changeLink.addEventListener('click', async function(e){ e.preventDefault(); await patchJson(studentUrl(myId), { teamId: null }); poll(); });
+        content.querySelectorAll('.pick-btn').forEach(function(btn){
+          btn.addEventListener('click', async function(){
+            content.querySelectorAll('.pick-btn').forEach(function(b){ b.disabled = true; });
+            await patchJson(studentUrl(myId), { teamId: btn.getAttribute('data-team'), role: 'member' });
+            poll();
+          });
+        });
+        return;
+      }
+
+      if (meta.phase === 'playing') {
+        if (!me || !me.teamId) { content.innerHTML = whoamiHtml() + '<p class="status-text">Гра вже триває — ви, на жаль, не встигли обрати команду.</p>'; bindSwitchLink(); return; }
+        var team = teams.filter(function(t){ return t.id === me.teamId; })[0];
+        var idx = meta.currentIndex;
+        var total = (meta.order || []).length;
+        if (idx >= total) { renderEndForPlayer(teams, team); bindSwitchLink(); return; }
+        var q = meta.order[idx];
+        var spinnerTeam = teams.filter(function(t){ return t.id === meta.spinnerTeamId; })[0];
+        var isMySpinnerTurn = meta.spinnerTeamId === me.teamId;
+        var isMyTeamBuzzed = meta.buzzedTeamId === me.teamId;
+        var alreadyTriedMine = (meta.triedTeamIds || []).indexOf(me.teamId) !== -1;
+        var html = whoamiHtml() + '<p class="br-mini-score">Команда «' + esc(team ? team.name : '') + '» · рахунок: ' + (team ? team.score || 0 : 0) + ' · питання ' + (idx+1) + ' з ' + total + '</p>';
+
+        if (meta.roundState === 'idle') {
+          if (me.role === 'captain' && isMySpinnerTurn) {
+            html += '<button class="btn gold br-spin-btn" id="spin-btn">Крутити барабан</button>';
+          } else {
+            html += '<p class="status-text">Черга команди «' + esc(spinnerTeam ? spinnerTeam.name : '') + '» крутити барабан...</p>';
+          }
+        } else if (meta.roundState === 'spinning') {
+          html += '<p class="status-text">' + (isMySpinnerTurn ? 'Ваш капітан крутить барабан!' : 'Команда «' + esc(spinnerTeam ? spinnerTeam.name : '') + '» крутить барабан...') + '</p>';
+        } else if (meta.roundState === 'revealed' || meta.roundState === 'buzzed' || meta.roundState === 'judged') {
+          html += '<div class="br-question-box">' + (q.isBlackBox ? '📦 ЧОРНИЙ ЯЩИК<br>' : '') + esc(q.text) + '</div>';
+          if (meta.roundState === 'revealed') {
+            if (alreadyTriedMine) html += '<p class="status-text">Ваша команда вже відповідала невірно на це питання — черга інших.</p>';
+            else if (me.role === 'captain') html += '<button class="btn danger br-buzz-btn" id="buzz-btn">ВІДПОВІДАЄМО!</button>';
+            else html += '<p class="status-text">Капітан тисне кнопку, якщо команда готова відповідати.</p>';
+          } else if (meta.roundState === 'buzzed') {
+            if (isMyTeamBuzzed && me.role === 'captain' && !meta.answeringStudentId) {
+              var mates2 = students.filter(function(s){ return s.teamId === me.teamId; });
+              html += '<p class="status-text">Ваша команда першою натиснула! Оберіть, хто відповідає:</p><div class="pick-list">';
+              mates2.forEach(function(s){ html += '<button class="pick-btn answerer-btn" data-sid="' + esc(s.id) + '" data-sname="' + esc(s.name) + '">' + esc(s.name) + '</button>'; });
+              html += '</div>';
+            } else if (isMyTeamBuzzed) {
+              html += '<p class="status-text">Ваша команда відповідає! Капітан обирає, хто говорить.</p>';
+            } else {
+              html += '<p class="status-text">Відповідає команда «' + esc((teams.filter(function(t){return t.id===meta.buzzedTeamId;})[0]||{}).name || '') + '»' + (meta.answeringStudentName ? ' (' + esc(meta.answeringStudentName) + ')' : '') + '.</p>';
+            }
+          } else if (meta.roundState === 'judged') {
+            html += judgementBannerHtml(meta.lastJudgement);
+          }
+        }
+        content.innerHTML = html;
+        bindSwitchLink();
+        var spinBtn = document.getElementById('spin-btn');
+        if (spinBtn) spinBtn.addEventListener('click', async function(){
+          spinBtn.disabled = true;
+          // Більше не перегони -- кнопку тут бачить лише капітан команди, чия
+          // зараз черга, тож просто напряму переводимо раунд у "spinning".
+          await patchJson(META_URL, { roundState: 'spinning', revealedAt: Date.now() + SPIN_MS });
+        });
+        var buzzBtn = document.getElementById('buzz-btn');
+        if (buzzBtn) buzzBtn.addEventListener('click', async function(){
+          buzzBtn.disabled = true;
+          await putJson(buzzEntryUrl(brRoundKey(meta), me.teamId), { at: Date.now() });
+        });
+        content.querySelectorAll('.answerer-btn').forEach(function(btn){
+          btn.addEventListener('click', async function(){
+            content.querySelectorAll('.answerer-btn').forEach(function(b){ b.disabled = true; });
+            await patchJson(META_URL, { answeringStudentId: btn.getAttribute('data-sid'), answeringStudentName: btn.getAttribute('data-sname') });
+          });
+        });
+        return;
+      }
+
+      if (meta.phase === 'end') { renderEndForPlayer(teams, (teams.filter(function(t){ return me && t.id === me.teamId; })[0])); bindSwitchLink(); return; }
+    }
+
+    function renderEndForPlayer(teams, myTeam){
+      var sorted = teams.slice().sort(function(a,b){ return (b.score||0) - (a.score||0); });
+      var html = whoamiHtml() + '<p class="status-text">Гра завершена! 🎉</p>';
+      if (myTeam) {
+        var place = sorted.findIndex(function(t){ return t.id === myTeam.id; }) + 1;
+        html += '<p class="center">Ваша команда «' + esc(myTeam.name) + '» — ' + place + '-е місце, рахунок ' + (myTeam.score||0) + '.</p>';
+      }
+      content.innerHTML = html;
+    }
+
+    async function poll(){
+      if (polling) return;
+      polling = true;
+      try {
+        var meta = await getJson(META_URL);
+        if (meta === undefined) { polling = false; return; }
+        if (meta && meta.gameId) syncGameId(meta.gameId);
+        var me = null, teams = [], students = [];
+        if (meta) {
+          var allStudents = await getJson(STUDENTS_URL);
+          students = allStudents ? Object.keys(allStudents).map(function(id){ var s = allStudents[id] || {}; return { id: id, group: s.group, name: s.name, role: s.role || null, teamId: s.teamId || null }; }) : [];
+          me = students.filter(function(s){ return s.id === myId; })[0] || null;
+          var allTeams = await getJson(TEAMS_URL);
+          teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, captainId: t.captainId, score: t.score || 0 }; }) : [];
+        }
+        var key = JSON.stringify([meta && meta.phase, meta && meta.gameId, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentId, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), me && me.teamId, me && me.role, teams.map(function(t){return t.id+':'+t.score;}).join(','), students.length]);
+        if (key !== lastKey) { lastKey = key; render(meta, me, teams, students); }
+      } catch (err) { console.error('poll error', err); }
+      polling = false;
+    }
+
+    function startLoop(){ poll(); setInterval(poll, 900); }
+
+    if (myId && myGroup && myName) { startLoop(); } else { showRegistration(); }
+  }
+
+  /* ================= TV VIEW ================= */
+  function tvInit(){
+    appWrap.className = 'wrap';
+    var lastKey = null;
+    var polling = false;
+
+    function joinBlockHtml(){
+      var url = STUDENT_URL;
+      var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(url);
+      return '<div class="join"><img src="' + qr + '" width="160" height="160" alt="QR"><div><p class="link">' + esc(url) + '</p><button class="btn ghost copy-link-btn" data-url="' + esc(url) + '">Скопіювати лінк</button></div></div>';
+    }
+
+    function bindCopy(){
+      var btn = document.querySelector('.copy-link-btn');
+      if (!btn) return;
+      btn.addEventListener('click', function(){
+        var url = btn.getAttribute('data-url');
+        (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function(){
+          btn.textContent = 'Скопійовано!'; setTimeout(function(){ btn.textContent = 'Скопіювати лінк'; }, 1500);
+        }).catch(function(){});
+      });
+    }
+
+    function teamCardHtml(t, members, meta){
+      var cls = 'br-team-card';
+      if ((meta.roundState === 'idle' || meta.roundState === 'spinning') && meta.spinnerTeamId === t.id) cls += ' active-spin';
+      if (meta.buzzedTeamId === t.id) cls += ' active-buzz';
+      if (meta.roundState === 'revealed' && (meta.triedTeamIds || []).indexOf(t.id) !== -1) cls += ' tried-out';
+      var cap = members.filter(function(m){ return m.role === 'captain'; })[0];
+      var others = members.filter(function(m){ return m.role !== 'captain'; });
+      return '<div class="' + cls + '">' +
+        '<div class="br-team-name">' + esc(t.name) + '</div>' +
+        '<div class="br-team-score">' + (t.score || 0) + '</div>' +
+        '<div class="br-team-members">' + (cap ? '<span class="cap-tag">' + esc(cap.name) + '</span>' : '<span class="muted">без капітана</span>') + (others.length ? (cap ? ', ' : '') + others.map(function(m){ return esc(m.name); }).join(', ') : '') + '</div>' +
+        '</div>';
+    }
+
+    function renderEndTv(teams){
+      var sorted = teams.slice().sort(function(a, b){ return (b.score || 0) - (a.score || 0); });
+      var html = '<div class="end-screen"><p class="status-text">Гра завершена! 🎉</p><table class="stats"><thead><tr><th></th><th>Команда</th><th>Рахунок</th></tr></thead><tbody>';
+      sorted.forEach(function(t, i){ html += '<tr class="' + (i === 0 ? 'top1' : '') + '"><td class="rank">' + (i + 1) + '</td><td>' + esc(t.name) + '</td><td class="num">' + (t.score || 0) + '</td></tr>'; });
+      html += '</tbody></table></div>';
+      content.innerHTML = html;
+    }
+
+    function render(meta, students, teams){
+      if (!meta || meta.phase === 'lobby') {
+        content.innerHTML = '<div class="start-screen"><p class="status-text">Реєстрація учасників</p>' + joinBlockHtml() + '<p class="br-live-count">Зареєстровано: ' + students.length + '</p></div>';
+        bindCopy();
+        return;
+      }
+      if (meta.phase === 'teams') {
+        var unassigned = students.filter(function(s){ return !s.teamId; }).length;
+        var html = '<p class="status-text">Формування команд</p>' +
+          '<div class="br-tables">' + teams.map(function(t){ return teamCardHtml(t, students.filter(function(s){ return s.teamId === t.id; }), meta); }).join('') + '</div>' +
+          '<p class="br-live-count">Ще не обрали команду: ' + unassigned + '</p>';
+        content.innerHTML = html;
+        return;
+      }
+      if (meta.phase === 'playing') {
+        var idx = meta.currentIndex, total = (meta.order || []).length;
+        if (idx >= total) { renderEndTv(teams); return; }
+        var q = meta.order[idx];
+        var html2 = '<p class="br-qcount">Питання ' + (idx + 1) + ' з ' + total + '</p>' +
+          '<div class="br-tables">' + teams.map(function(t){ return teamCardHtml(t, students.filter(function(s){ return s.teamId === t.id; }), meta); }).join('') + '</div>' +
+          '<div class="br-stage">';
+        var spinTeam = teams.filter(function(t){ return t.id === meta.spinnerTeamId; })[0];
+        if (meta.roundState === 'idle') {
+          html2 += '<p class="status-text">Черга крутити барабан: команда «' + esc(spinTeam ? spinTeam.name : '') + '»!</p>';
+        } else if (meta.roundState === 'spinning') {
+          html2 += '<div class="br-spin-anim">🎡</div><p class="status-text">Команда «' + esc(spinTeam ? spinTeam.name : '') + '» крутить барабан...</p>';
+        } else {
+          html2 += q.isBlackBox ? '<div class="br-blackbox">📦 ЧОРНИЙ ЯЩИК</div>' : '<div class="tv-question" style="font-size:clamp(1.8rem,4vw,3rem);">' + esc(q.text) + '</div>';
+          if (meta.roundState === 'revealed') {
+            html2 += '<p class="br-waiting-whoanswer">Хто першим натисне — відповідає!</p>';
+            if ((meta.triedTeamIds || []).length) {
+              html2 += '<p class="muted">Вже відповідали невірно: ' + meta.triedTeamIds.map(function(tid){ var tt = teams.filter(function(t){return t.id===tid;})[0]; return esc(tt ? tt.name : ''); }).join(', ') + '</p>';
+            }
+          } else if (meta.roundState === 'buzzed' || meta.roundState === 'judged') {
+            var bt = teams.filter(function(t){ return t.id === meta.buzzedTeamId; })[0];
+            html2 += '<p class="br-answerer">Відповідає: «' + esc(bt ? bt.name : '') + '»' + (meta.answeringStudentName ? ' — ' + esc(meta.answeringStudentName) : '') + '</p>';
+            if (meta.roundState === 'judged') html2 += judgementBannerHtml(meta.lastJudgement);
+          }
+        }
+        html2 += '</div>';
+        content.innerHTML = html2;
+        return;
+      }
+      if (meta.phase === 'end') { renderEndTv(teams); return; }
+    }
+
+    async function poll(){
+      if (polling) return;
+      polling = true;
+      try {
+        var meta = await ensureGameInitialized();
+        if (meta === undefined) { polling = false; return; }
+        await runDriverTick(meta);
+        meta = await getJson(META_URL); // перечитуємо — драйвер щойно міг змінити стан
+        if (meta === undefined) { polling = false; return; }
+        var allStudents = await getJson(STUDENTS_URL);
+        var students = allStudents ? Object.keys(allStudents).map(function(id){ var s = allStudents[id] || {}; return { id: id, name: s.name, role: s.role || null, teamId: s.teamId || null }; }) : [];
+        var allTeams = await getJson(TEAMS_URL);
+        var teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, score: t.score || 0 }; }) : [];
+        var key = JSON.stringify([meta && meta.phase, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentName, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), students.length, teams.map(function(t){ return t.id + ':' + t.score; }).join(',')]);
+        if (key !== lastKey) { lastKey = key; render(meta, students, teams); }
+      } catch (err) { console.error('tv poll error', err); }
+      polling = false;
+    }
+
+    poll(); setInterval(poll, 1000);
+  }
+
+  /* ================= ADMIN VIEW ================= */
+  function adminInit(){
+    appWrap.className = 'wrap admin-wrap';
+    var questionsCache = {};
+    var lastImportStatus = '';
+    var addOpen = false, importOpen = false;
+    var adminError = '';
+    var gameErrorMsg = '';
+    // Game-панель перемальовується з опитуванням кожну секунду, тож без окремого
+    // стану позначені прапорці капітанів "забувались" би вже на наступному тику —
+    // наприклад, якщо вчитель позначив капітанів, помилився з кількістю команд і не
+    // встиг виправити це за секунду. Памʼятаємо вибір тут, як і стан <details> нижче.
+    var checkedCaptainIds = {};
+
+    function pinScreen(){
+      content.innerHTML = '<p class="muted" style="margin-bottom:1rem;">Режим викладача — введіть PIN</p>' +
+        '<form id="pin-form"><input type="password" id="pin-input" inputmode="numeric" autocomplete="off" placeholder="Код"> <button class="btn" type="submit">Увійти</button></form>';
+      document.getElementById('pin-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        if (document.getElementById('pin-input').value === PIN) { initShell(); }
+        else { document.getElementById('pin-input').value = ''; document.getElementById('pin-input').placeholder = 'Невірно'; }
+      });
+    }
+
+    function initShell(){
+      content.innerHTML = '<a class="admin-back" href="?tv" target="_blank" rel="noopener">← Екран для проєктора (TV)</a>' +
+        '<div id="game-panel" class="admin-section"></div>' +
+        '<div id="qbank-panel" class="admin-section"></div>';
+      loadQuestions().then(function(){ renderQBank(''); });
+      pollGame();
+      setInterval(pollGame, 1000);
+    }
+
+    async function loadQuestions(){
+      var all = await getJson(QUESTIONS_URL);
+      questionsCache = all || {};
+    }
+
+    /* ---- game-flow panel ---- */
+    async function pollGame(){
+      try {
+        var meta = await ensureGameInitialized();
+        if (meta === undefined) return;
+        await runDriverTick(meta);
+        meta = await getJson(META_URL);
+        if (meta === undefined) return;
+        var allStudents = await getJson(STUDENTS_URL);
+        var students = allStudents ? Object.keys(allStudents).map(function(id){ var s = allStudents[id] || {}; return { id: id, group: s.group, name: s.name, role: s.role || null, teamId: s.teamId || null }; }) : [];
+        var allTeams = await getJson(TEAMS_URL);
+        var teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, captainId: t.captainId, score: t.score || 0 }; }) : [];
+        renderGamePanel(meta, students, teams);
+      } catch (e) { console.error('admin pollGame error', e); }
+    }
+
+    function scoreboardHtml(teams){
+      var sorted = teams.slice().sort(function(a, b){ return (b.score || 0) - (a.score || 0); });
+      var html = '<table class="stats"><thead><tr><th></th><th>Команда</th><th>Рахунок</th></tr></thead><tbody>';
+      sorted.forEach(function(t, i){ html += '<tr class="' + (i === 0 ? 'top1' : '') + '"><td class="rank">' + (i + 1) + '</td><td>' + esc(t.name) + '</td><td class="num">' + (t.score || 0) + '</td></tr>'; });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function lobbyPanelHtml(students){
+      var sorted = students.slice().sort(function(a, b){ return (a.name || '').localeCompare(b.name || ''); });
+      var suggested = suggestTeamCount(students.length);
+      var html = '<h2>Крок 1 — Реєстрація та капітани</h2><p class="admin-count">Зареєстровано: <b>' + students.length + '</b></p>';
+      if (!sorted.length) {
+        html += '<p class="muted">Учні ще не реєструвались — покажіть їм лінк/QR на екрані проєктора (?tv).</p>';
+      } else {
+        html += '<div class="admin-captain-list">' + sorted.map(function(s){
+          return '<label class="admin-captain-row"><input type="checkbox" class="captain-check" data-id="' + esc(s.id) + '"' + (checkedCaptainIds[s.id] ? ' checked' : '') + '> ' + esc(s.group) + ' · ' + esc(s.name) + '</label>';
+        }).join('') + '</div>';
+        html += '<div class="admin-add-row"><label>Кількість команд:&nbsp;</label><input type="number" id="team-count-input" min="1" value="' + suggested + '"></div>';
+        html += '<p class="muted">Позначте капітанів прапорцями — кількість позначених має збігатися з кількістю команд.</p>';
+        html += '<button class="btn gold" id="form-teams-btn" type="button">Сформувати команди</button>';
+      }
+      return html;
+    }
+
+    function teamsPanelHtml(meta, students, teams){
+      var unassigned = students.filter(function(s){ return !s.teamId; });
+      var activeQCount = Math.max(1, Object.keys(questionsCache).filter(function(id){ return questionsCache[id].active !== false; }).length);
+      var html = '<h2>Крок 2 — Формування команд</h2>';
+      html += '<div class="admin-teams-grid">' + teams.map(function(t){
+        var mem = students.filter(function(s){ return s.teamId === t.id; });
+        return '<div class="admin-team-box"><h3>' + esc(t.name) + '</h3><ul>' + mem.map(function(m){ return '<li>' + esc(m.name) + (m.role === 'captain' ? ' (капітан)' : '') + '</li>'; }).join('') + '</ul></div>';
+      }).join('') + '</div>';
+      html += '<p class="admin-count">Ще не обрали команду: ' + unassigned.length + (unassigned.length ? (' — ' + unassigned.map(function(s){ return esc(s.name); }).join(', ')) : '') + '</p>';
+      html += '<div class="admin-add-row"><label>Кількість питань у грі:&nbsp;</label><input type="number" id="qcount-input" min="1" value="' + activeQCount + '"></div>';
+      html += '<div class="admin-judge-row"><button class="btn gold" id="start-game-btn" type="button">Почати гру</button><button class="btn ghost small" id="back-to-lobby-btn" type="button">← Змінити капітанів</button></div>';
+      return html;
+    }
+
+    function playingPanelHtml(meta, students, teams){
+      var idx = meta.currentIndex, total = (meta.order || []).length;
+      if (idx >= total) return endPanelBodyHtml(teams);
+      var q = meta.order[idx];
+      var spinTeam = teams.filter(function(t){ return t.id === meta.spinnerTeamId; })[0];
+      var html = '<h2>Гра — питання ' + (idx + 1) + ' з ' + total + '</h2>';
+      html += '<div class="admin-current-q">' + (q.isBlackBox ? '📦 ЧОРНИЙ ЯЩИК: ' : '') + esc(q.text) + '</div>';
+      if (q.explain) html += '<p class="muted center">Коментар: ' + esc(q.explain) + '</p>';
+      if (meta.roundState === 'idle') html += '<p class="status-text">Черга крутити барабан: команда «' + esc(spinTeam ? spinTeam.name : '') + '»</p>';
+      else if (meta.roundState === 'spinning') html += '<p class="status-text">Барабан крутиться (команда «' + esc(spinTeam ? spinTeam.name : '') + '»)...</p>';
+      else if (meta.roundState === 'revealed') {
+        html += '<p class="status-text">Очікуємо, хто з капітанів натисне першим...</p>';
+        if ((meta.triedTeamIds || []).length) {
+          html += '<p class="muted center">Вже відповідали невірно на це питання: ' + meta.triedTeamIds.map(function(tid){ var tt = teams.filter(function(t){return t.id===tid;})[0]; return esc(tt ? tt.name : ''); }).join(', ') + '</p>';
+        }
+      }
+      else if (meta.roundState === 'buzzed' || meta.roundState === 'judged') {
+        var bt = teams.filter(function(t){ return t.id === meta.buzzedTeamId; })[0];
+        html += '<p class="br-answerer" style="text-align:center;">Відповідає: «' + esc(bt ? bt.name : '') + '»' + (meta.answeringStudentName ? ' — ' + esc(meta.answeringStudentName) : ' (капітан ще обирає...)') + '</p>';
+        if (meta.roundState === 'buzzed' && meta.answeringStudentId) {
+          html += '<div class="admin-judge-row"><button class="btn" id="judge-correct-btn" type="button">✓ Вірно</button><button class="btn danger" id="judge-wrong-btn" type="button">✗ Невірно</button></div>';
+          html += '<p class="muted center">«Невірно» передає право відповіді далі — наступному капітану, який натисне (хто вже відповідав невірно на це питання, вдруге натиснути не зможе).</p>';
+        } else if (meta.roundState === 'judged') {
+          html += judgementBannerHtml(meta.lastJudgement);
+          html += '<div class="admin-judge-row"><button class="btn gold" id="next-q-btn" type="button">Наступне питання →</button></div>';
+        }
+      }
+      if (meta.roundState === 'idle' || meta.roundState === 'spinning' || meta.roundState === 'revealed') {
+        html += '<p class="center"><button class="btn ghost small" id="skip-q-btn" type="button">Пропустити це питання →</button></p>';
+      }
+      html += scoreboardHtml(teams);
+      return html;
+    }
+
+    function endPanelBodyHtml(teams){
+      return '<h2>Гру завершено 🎉</h2>' + scoreboardHtml(teams);
+    }
+
+    function renderGamePanel(meta, students, teams){
+      var panel = document.getElementById('game-panel');
+      if (!panel) return;
+      // Не перемальовуємо панель, поки адмін саме друкує в полі вводу (наприклад,
+      // кількість команд) — інакше щосекундний опитувальний рендер скидав би курсор
+      // і введене значення.
+      var active = document.activeElement;
+      if (active && panel.contains(active) && active.tagName === 'INPUT') return;
+
+      var html = '';
+      if (gameErrorMsg) html += '<div class="admin-error">⚠ ' + esc(gameErrorMsg) + '</div>';
+      if (!meta || meta.phase === 'lobby') html += lobbyPanelHtml(students);
+      else if (meta.phase === 'teams') html += teamsPanelHtml(meta, students, teams);
+      else if (meta.phase === 'playing') html += playingPanelHtml(meta, students, teams);
+      else if (meta.phase === 'end') html += endPanelBodyHtml(teams);
+      html += '<p style="margin-top:1rem;"><button class="btn ghost small" id="reset-game-btn" type="button">Нова гра (скинути все)</button></p>';
+      panel.innerHTML = html;
+      bindGamePanelEvents(meta, students, teams);
+    }
+
+    async function judge(isCorrect, meta, teams){
+      var teamId = meta.buzzedTeamId;
+      if (isCorrect && teamId) {
+        var team = teams.filter(function(t){ return t.id === teamId; })[0];
+        var newScore = (team ? team.score || 0 : 0) + 1;
+        await putJson(teamScoreUrl(teamId), newScore);
+        await patchJson(META_URL, { roundState: 'judged', lastJudgement: 'correct' });
+      } else {
+        // Класична передача права відповіді: команда, що відповіла невірно,
+        // більше не може натискати на ЦЕ питання (triedTeamIds), але раунд
+        // лишається "revealed" -- право переходить до наступної команди, яка
+        // натисне (а якщо хтось уже встиг натиснути раніше за всіх — саме її
+        // натискання і підхопить драйвер, без повторного натискання кнопки).
+        // Коли вже всі команди встигли невдало спробувати — питання закривається.
+        var tried = (meta.triedTeamIds || []).slice();
+        if (teamId && tried.indexOf(teamId) === -1) tried.push(teamId);
+        var allTried = teams.length > 0 && tried.length >= teams.length;
+        await patchJson(META_URL, {
+          roundState: allTried ? 'judged' : 'revealed',
+          lastJudgement: allTried ? 'wrong' : null,
+          buzzedTeamId: allTried ? teamId : null,
+          answeringStudentId: null,
+          answeringStudentName: null,
+          triedTeamIds: tried
+        });
+      }
+      pollGame();
+    }
+
+    // Визначає, хто крутитиме барабан на наступному питанні (переможець
+    // попереднього, або випадково той, хто ще не крутив, якщо переможця не було),
+    // і просуває гру до нього. winnerTeamId=null означає "ніхто не виграв це
+    // питання" (використовується і для вичерпаних спроб, і для ручного "Пропустити").
+    async function advanceToNextQuestion(meta, teams, winnerTeamId){
+      var pick = pickNextSpinner({
+        isFirstQuestion: false,
+        prevWinnerTeamId: winnerTeamId,
+        teamIds: teams.map(function(t){ return t.id; }),
+        spunTeamIds: meta.spunTeamIds || []
+      });
+      await patchJson(META_URL, {
+        currentIndex: (meta.currentIndex || 0) + 1,
+        roundState: 'idle',
+        spinnerTeamId: pick.spinnerId,
+        spunTeamIds: pick.spunTeamIds,
+        buzzedTeamId: null, buzzedAt: null,
+        answeringStudentId: null, answeringStudentName: null,
+        lastJudgement: null, revealedAt: null,
+        triedTeamIds: []
+      });
+      pollGame();
+    }
+
+    function bindGamePanelEvents(meta, students, teams){
+      document.querySelectorAll('.captain-check').forEach(function(cb){
+        cb.addEventListener('change', function(){
+          var sid = cb.getAttribute('data-id');
+          if (cb.checked) checkedCaptainIds[sid] = true; else delete checkedCaptainIds[sid];
+        });
+      });
+
+      var formTeamsBtn = document.getElementById('form-teams-btn');
+      if (formTeamsBtn) formTeamsBtn.addEventListener('click', async function(){
+        var checked = Array.prototype.slice.call(document.querySelectorAll('.captain-check:checked'));
+        var teamCountInput = document.getElementById('team-count-input');
+        var wantCount = parseInt(teamCountInput.value, 10) || 0;
+        if (!checked.length) { gameErrorMsg = 'Позначте хоча б одного капітана.'; renderGamePanel(meta, students, teams); return; }
+        if (checked.length !== wantCount) { gameErrorMsg = 'Позначено капітанів: ' + checked.length + ', а команд вказано: ' + wantCount + '. Виправте одне з двох.'; renderGamePanel(meta, students, teams); return; }
+        formTeamsBtn.disabled = true;
+        var patchTeams = {}; var patchStudents = {};
+        checked.forEach(function(cb){
+          var sid = cb.getAttribute('data-id');
+          var student = students.filter(function(s){ return s.id === sid; })[0];
+          var newTeamId = tid();
+          patchTeams[newTeamId] = { name: 'Команда «' + (student ? student.name : '?') + '»', captainId: sid, score: 0, createdAt: Date.now() };
+          patchStudents[sid] = { teamId: newTeamId, role: 'captain' };
+        });
+        var ok1 = await patchJson(TEAMS_URL, patchTeams);
+        var ok2list = await Promise.all(Object.keys(patchStudents).map(function(sid){ return patchJson(studentUrl(sid), patchStudents[sid]); }));
+        var ok2 = ok2list.every(Boolean);
+        var ok3 = await patchJson(META_URL, { phase: 'teams', teamCount: wantCount });
+        gameErrorMsg = (ok1 && ok2 && ok3) ? '' : 'Не вдалося зберегти формування команд у базі — перевірте з’єднання і спробуйте ще раз.';
+        checkedCaptainIds = {};
+        pollGame();
+      });
+
+      var backBtn = document.getElementById('back-to-lobby-btn');
+      if (backBtn) backBtn.addEventListener('click', async function(){
+        if (!confirm('Повернутись до лобі? Поточні команди буде видалено (учні зможуть зареєструватись знову, якщо потрібно).')) return;
+        await delJson(TEAMS_URL);
+        var allStudents = await getJson(STUDENTS_URL);
+        if (allStudents) {
+          var resetPatch = {};
+          Object.keys(allStudents).forEach(function(sid){ resetPatch[sid] = { teamId: null, role: null }; });
+          await patchJson(STUDENTS_URL, resetPatch);
+        }
+        await patchJson(META_URL, { phase: 'lobby' });
+        checkedCaptainIds = {};
+        pollGame();
+      });
+
+      var startGameBtn = document.getElementById('start-game-btn');
+      if (startGameBtn) startGameBtn.addEventListener('click', async function(){
+        startGameBtn.disabled = true;
+        var activeQs = Object.keys(questionsCache)
+          .filter(function(id){ return questionsCache[id] && questionsCache[id].text && questionsCache[id].active !== false; })
+          .map(function(id){ return { id: id, text: questionsCache[id].text, isBlackBox: !!questionsCache[id].isBlackBox, explain: questionsCache[id].explain || '' }; });
+        if (!activeQs.length) { gameErrorMsg = 'Немає жодного активного питання в банку — додайте питання нижче перед початком гри.'; renderGamePanel(meta, students, teams); return; }
+        var qcountInput = document.getElementById('qcount-input');
+        var n = Math.max(1, Math.min(activeQs.length, parseInt(qcountInput ? qcountInput.value : activeQs.length, 10) || activeQs.length));
+        var order = randomOrder(activeQs, n);
+        // Перше питання гри -- випадкова команда отримує право крутити барабан.
+        var pick0 = pickNextSpinner({ isFirstQuestion: true, teamIds: teams.map(function(t){ return t.id; }) });
+        // Увага: НЕ змінюємо тут gameId. Він лишається тим самим від самої реєстрації
+        // аж до справжнього "Нова гра" (яке й стирає учасників на сервері) — інакше
+        // кожен телефон учня (що порівнює свій збережений gameId із тим, що в meta)
+        // вирішив би, що почався новий раунд, і скинув би реєстрацію локально, хоча
+        // на сервері він досі в команді. Саме так трохи не зламало гру під час тесту.
+        var ok = await patchJson(META_URL, { phase: 'playing', currentIndex: 0, roundState: 'idle', order: order,
+          spinnerTeamId: pick0.spinnerId, spunTeamIds: pick0.spunTeamIds,
+          buzzedTeamId: null, buzzedAt: null, answeringStudentId: null, answeringStudentName: null,
+          lastJudgement: null, revealedAt: null, triedTeamIds: [] });
+        gameErrorMsg = ok ? '' : 'Не вдалося запустити гру — перевірте з’єднання і спробуйте ще раз.';
+        pollGame();
+      });
+
+      var judgeCorrect = document.getElementById('judge-correct-btn');
+      if (judgeCorrect) judgeCorrect.addEventListener('click', function(){ judge(true, meta, teams); });
+      var judgeWrong = document.getElementById('judge-wrong-btn');
+      if (judgeWrong) judgeWrong.addEventListener('click', function(){ judge(false, meta, teams); });
+
+      var nextQBtn = document.getElementById('next-q-btn');
+      if (nextQBtn) nextQBtn.addEventListener('click', function(){
+        nextQBtn.disabled = true;
+        var winnerTeamId = meta.lastJudgement === 'correct' ? meta.buzzedTeamId : null;
+        advanceToNextQuestion(meta, teams, winnerTeamId);
+      });
+
+      var skipQBtn = document.getElementById('skip-q-btn');
+      if (skipQBtn) skipQBtn.addEventListener('click', function(){
+        if (!confirm('Пропустити це питання без відповіді? Рахунок команд не зміниться.')) return;
+        skipQBtn.disabled = true;
+        advanceToNextQuestion(meta, teams, null);
+      });
+
+      var resetBtn = document.getElementById('reset-game-btn');
+      if (resetBtn) resetBtn.addEventListener('click', async function(){
+        if (!confirm('Повністю почати нову гру? Будуть видалені всі зареєстровані учасники, команди і рахунки (банк питань залишиться).')) return;
+        await Promise.all([delJson(STUDENTS_URL), delJson(TEAMS_URL), delJson(BUZZES_URL)]);
+        await putJson(META_URL, { phase: 'lobby', gameId: gid(), teamCount: 0, currentIndex: 0, roundState: 'idle' });
+        checkedCaptainIds = {};
+        pollGame();
+      });
+    }
+
+    /* ---- question-bank panel ---- */
+    function parseBoolFlag(v){
+      if (typeof v === 'boolean') return v;
+      var s = String(v == null ? '' : v).trim().toLowerCase();
+      return s === 'true' || s === '1' || s === 'так' || s === 'yes' || s === 'y' || s === 'чорний ящик' || s === 'blackbox';
+    }
+
+    function normalizeQItem(raw){
+      if (!raw || typeof raw !== 'object') return null;
+      var text = String(raw.text != null ? raw.text : (raw.question != null ? raw.question : (raw['питання'] != null ? raw['питання'] : ''))).trim();
+      if (!text) return null;
+      var bbRaw = raw.isBlackBox != null ? raw.isBlackBox : (raw.blackbox != null ? raw.blackbox : (raw['чорний ящик'] != null ? raw['чорний ящик'] : ''));
+      var explain = String(raw.explain != null ? raw.explain : (raw.comment != null ? raw.comment : (raw['пояснення'] != null ? raw['пояснення'] : (raw['коментар'] != null ? raw['коментар'] : '')))).trim();
+      return { text: text, isBlackBox: parseBoolFlag(bbRaw), explain: explain };
+    }
+
+    function parseCsv(text){
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      var firstLine = text.split(/\r\n|\n|\r/)[0] || '';
+      var delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+      var rows = []; var row = []; var field = ''; var inQuotes = false;
+      for (var i = 0; i < text.length; i++) {
+        var c = text[i];
+        if (inQuotes) {
+          if (c === '"') { if (text[i+1] === '"') { field += '"'; i++; } else { inQuotes = false; } }
+          else field += c;
+        } else if (c === '"') {
+          inQuotes = true;
+        } else if (c === delim) {
+          row.push(field); field = '';
+        } else if (c === '\n' || c === '\r') {
+          if (c === '\r' && text[i+1] === '\n') i++;
+          row.push(field); field = '';
+          if (row.length > 1 || row[0] !== '') rows.push(row);
+          row = [];
+        } else field += c;
+      }
+      if (field !== '' || row.length) { row.push(field); rows.push(row); }
+      return rows;
+    }
+
+    function parseQItemsCsv(text){
+      var rows = parseCsv(text);
+      if (!rows.length) return [];
+      var header = rows[0].map(function(h){ return String(h).trim().toLowerCase(); });
+      function colIndex(names){ for (var n = 0; n < names.length; n++) { var idx = header.indexOf(names[n]); if (idx !== -1) return idx; } return -1; }
+      var textIdx = colIndex(['text', 'question', 'питання', 'текст']);
+      var bbIdx = colIndex(['isblackbox', 'blackbox', 'чорний ящик']);
+      var explainIdx = colIndex(['explain', 'comment', 'пояснення', 'коментар']);
+      var hasHeader = textIdx !== -1 || bbIdx !== -1 || explainIdx !== -1;
+      var dataRows = hasHeader ? rows.slice(1) : rows;
+      if (!hasHeader) { textIdx = 0; bbIdx = 1; explainIdx = 2; }
+      var result = [];
+      dataRows.forEach(function(r){
+        if (!r || !r.length) return;
+        var item = normalizeQItem({ text: textIdx !== -1 ? r[textIdx] : '', isBlackBox: bbIdx !== -1 ? r[bbIdx] : '', explain: explainIdx !== -1 ? r[explainIdx] : '' });
+        if (item) result.push(item);
+      });
+      return result;
+    }
+
+    function parseQItemsJson(text){
+      var data = JSON.parse(text);
+      var arr = Array.isArray(data) ? data : (data && Array.isArray(data.questions) ? data.questions : []);
+      var result = [];
+      arr.forEach(function(raw){ var item = normalizeQItem(raw); if (item) result.push(item); });
+      return result;
+    }
+
+    function sortedQIds(){ return Object.keys(questionsCache).sort(function(a, b){ return (questionsCache[a].createdAt || 0) - (questionsCache[b].createdAt || 0); }); }
+
+    function renderQBank(filterText){
+      var panel = document.getElementById('qbank-panel');
+      if (!panel) return;
+      var ids = sortedQIds();
+      var total = ids.length;
+      var activeCount = ids.filter(function(id){ return questionsCache[id].active !== false; }).length;
+      var filter = (filterText || '').trim().toLowerCase();
+      var shownIds = filter ? ids.filter(function(id){ return (questionsCache[id].text || '').toLowerCase().indexOf(filter) !== -1; }) : ids;
+
+      var html = '<h2>Банк питань</h2>';
+      if (adminError) html += '<div class="admin-error">⚠ ' + esc(adminError) + '</div>';
+      html += '<div class="admin-toolbar"><p class="admin-count">Активних: <b>' + activeCount + '</b> із ' + total + '</p>' +
+        '<input type="text" id="admin-search" placeholder="Пошук по тексту питання…" value="' + esc(filterText || '') + '"></div>';
+
+      html += '<details class="admin-add"' + (addOpen ? ' open' : '') + '><summary>+ Додати нове питання</summary><div class="admin-add-form">' +
+        '<textarea id="add-text" placeholder="Текст питання" rows="2"></textarea>' +
+        '<div class="admin-add-row"><label><input type="checkbox" id="add-blackbox"> Чорний ящик</label>' +
+        '<input type="text" id="add-explain" placeholder="Коментар для себе (необов’язково)">' +
+        '<button class="btn" id="add-q-btn" type="button">Додати</button></div>' +
+        '</div></details>';
+
+      html += '<details class="admin-import"' + (importOpen ? ' open' : '') + '><summary>⇪ Залити питання файлом (CSV або JSON)</summary><div class="admin-import-body">' +
+        '<p class="muted" style="margin:0;">CSV: колонки <code>text</code>/<code>isBlackBox</code>/<code>explain</code> (або українською: <code>питання</code>/<code>чорний ящик</code>/<code>пояснення</code>), роздільник «,» або «;». JSON: масив об’єктів <code>{text, isBlackBox, explain}</code>.</p>' +
+        '<input type="file" id="import-file" accept=".csv,.json,text/csv,application/json">' +
+        '<a id="sample-csv-link" download="приклад-питань-брейнринг.csv">Завантажити приклад CSV</a>' +
+        '<p class="muted" id="import-status">' + esc(lastImportStatus) + '</p>' +
+        '</div></details>';
+
+      html += '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Питання</th><th>Тип</th><th>Коментар</th><th>Активне</th><th></th></tr></thead><tbody>';
+      if (!shownIds.length) {
+        html += '<tr><td colspan="5" class="muted" style="padding:1.2rem;text-align:center;">' + (total ? 'Нічого не знайдено за цим запитом.' : 'Питань ще немає — додайте перше вище.') + '</td></tr>';
+      } else {
+        shownIds.forEach(function(id){
+          var q = questionsCache[id];
+          var active = q.active !== false;
+          html += '<tr data-id="' + esc(id) + '"' + (active ? '' : ' class="inactive-row"') + '>' +
+            '<td class="admin-cell-text" data-field="text">' + esc(q.text) + '</td>' +
+            '<td class="admin-cell-answer" data-field="isBlackBox">' + (q.isBlackBox ? '📦 Чорний ящик' : 'Звичайне') + '</td>' +
+            '<td class="admin-cell-explain" data-field="explain">' + esc(q.explain || '') + '</td>' +
+            '<td class="admin-cell-active"><input type="checkbox" class="active-toggle" ' + (active ? 'checked' : '') + '></td>' +
+            '<td class="admin-cell-actions"><button class="btn ghost small edit-btn" type="button">Редагувати</button> <button class="btn danger small delete-btn" type="button">Видалити</button></td>' +
+            '</tr>';
+        });
+      }
+      html += '</tbody></table></div>';
+      panel.innerHTML = html;
+      bindQBankEvents(filterText);
+    }
+
+    function bindQBankEvents(filterText){
+      var searchInput = document.getElementById('admin-search');
+      if (searchInput) {
+        searchInput.addEventListener('input', function(){ renderQBank(searchInput.value); });
+        if (filterText) { searchInput.focus(); var v = searchInput.value; searchInput.setSelectionRange(v.length, v.length); }
+      }
+      var addDetails = document.querySelector('details.admin-add');
+      if (addDetails) addDetails.addEventListener('toggle', function(){ addOpen = addDetails.open; });
+      var importDetails = document.querySelector('details.admin-import');
+      if (importDetails) importDetails.addEventListener('toggle', function(){ importOpen = importDetails.open; });
+
+      var addBtn = document.getElementById('add-q-btn');
+      if (addBtn) addBtn.addEventListener('click', async function(){
+        var textEl = document.getElementById('add-text');
+        var text = textEl.value.trim();
+        if (!text) { textEl.focus(); return; }
+        var isBlackBox = document.getElementById('add-blackbox').checked;
+        var explain = document.getElementById('add-explain').value.trim();
+        addBtn.disabled = true;
+        var id = qid();
+        var q = { text: text, isBlackBox: isBlackBox, explain: explain, active: true, createdAt: Date.now() };
+        var ok = await putJson(questionUrl(id), q);
+        addOpen = true;
+        if (ok) { questionsCache[id] = q; adminError = ''; } else { adminError = 'Не вдалося зберегти питання в базі — перевірте з’єднання і спробуйте ще раз.'; }
+        renderQBank(filterText);
+      });
+
+      var sampleLink = document.getElementById('sample-csv-link');
+      if (sampleLink) {
+        var sample = '﻿' + 'text;isBlackBox;explain\r\n' +
+          'Приклад звичайного питання.;false;Короткий коментар.\r\n' +
+          'Приклад питання-чорний ящик.;true;Що в коробці?\r\n';
+        sampleLink.href = URL.createObjectURL(new Blob([sample], { type: 'text/csv;charset=utf-8' }));
+      }
+
+      var fileInput = document.getElementById('import-file');
+      if (fileInput) fileInput.addEventListener('change', async function(){
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        var statusEl = document.getElementById('import-status');
+        statusEl.textContent = 'Читання файлу…';
+        try {
+          var text = await file.text();
+          var items = (/\.json$/i.test(file.name) || /json/.test(file.type)) ? parseQItemsJson(text) : parseQItemsCsv(text);
+          if (!items.length) { lastImportStatus = 'У файлі не знайдено жодного коректного питання.'; importOpen = true; renderQBank(filterText); return; }
+          var patch = {};
+          items.forEach(function(item, i){ patch[qid() + '-' + i] = { text: item.text, isBlackBox: item.isBlackBox, explain: item.explain, active: true, createdAt: Date.now() + i }; });
+          var ok = await patchJson(QUESTIONS_URL, patch);
+          importOpen = true;
+          if (ok) { Object.assign(questionsCache, patch); lastImportStatus = 'Додано питань: ' + items.length + '.'; }
+          else { lastImportStatus = 'Не вдалося зберегти питання в базі — перевірте з’єднання чи правила доступу Firebase.'; }
+        } catch (err) { lastImportStatus = 'Помилка читання файлу: ' + err.message; importOpen = true; }
+        fileInput.value = '';
+        renderQBank(filterText);
+      });
+
+      document.querySelectorAll('.active-toggle').forEach(function(cb){
+        cb.addEventListener('change', async function(){
+          var tr = cb.closest('tr'); var id = tr.getAttribute('data-id');
+          var ok = await patchJson(questionUrl(id), { active: cb.checked });
+          if (ok) { questionsCache[id].active = cb.checked; adminError = ''; } else { cb.checked = !cb.checked; adminError = 'Не вдалося змінити статус питання в базі — спробуйте ще раз.'; }
+          renderQBank(filterText);
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          var tr = btn.closest('tr'); var id = tr.getAttribute('data-id');
+          if (!confirm('Видалити це питання?')) return;
+          var ok = await delJson(questionUrl(id));
+          if (ok) { delete questionsCache[id]; adminError = ''; } else { adminError = 'Не вдалося видалити питання з бази — спробуйте ще раз.'; }
+          renderQBank(filterText);
+        });
+      });
+
+      document.querySelectorAll('.edit-btn').forEach(function(btn){
+        function handleSave(){
+          var tr = btn.closest('tr'); var id = tr.getAttribute('data-id');
+          var text = tr.querySelector('.edit-text').value.trim();
+          var isBlackBox = tr.querySelector('.edit-blackbox').checked;
+          var explain = tr.querySelector('.edit-explain').value.trim();
+          if (!text) return;
+          patchJson(questionUrl(id), { text: text, isBlackBox: isBlackBox, explain: explain }).then(function(ok){
+            if (ok) { Object.assign(questionsCache[id], { text: text, isBlackBox: isBlackBox, explain: explain }); adminError = ''; } else { adminError = 'Не вдалося зберегти зміни в базі — спробуйте ще раз.'; }
+            renderQBank(filterText);
+          });
+        }
+        function handleEdit(){
+          var tr = btn.closest('tr'); var id = tr.getAttribute('data-id'); var q = questionsCache[id];
+          tr.querySelector('[data-field="text"]').innerHTML = '<textarea class="edit-text" rows="2">' + esc(q.text) + '</textarea>';
+          tr.querySelector('[data-field="isBlackBox"]').innerHTML = '<label><input type="checkbox" class="edit-blackbox" ' + (q.isBlackBox ? 'checked' : '') + '> чорний ящик</label>';
+          tr.querySelector('[data-field="explain"]').innerHTML = '<input type="text" class="edit-explain" value="' + esc(q.explain || '') + '">';
+          btn.textContent = 'Зберегти';
+          btn.removeEventListener('click', handleEdit);
+          btn.addEventListener('click', handleSave);
+        }
+        btn.addEventListener('click', handleEdit);
+      });
+    }
+
+    pinScreen();
+  }
+
+  /* ================= DISPATCH ================= */
+  if (isAdmin) { adminInit(); }
+  else if (isTv) { tvInit(); }
+  else { playerInit(); }
+})();
+</script>
+</body>
+</html>
