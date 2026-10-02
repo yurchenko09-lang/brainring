@@ -28,6 +28,25 @@
   }
   .wrap{ max-width: 1200px; margin: 0 auto; padding: 1.5rem; width: 100%; flex: 1; display: flex; flex-direction: column; }
   .wrap.narrow{ max-width: 480px; }
+
+  /* --- ТВ/проектор: використовуємо весь екран, а не вузьку колонку --- */
+  .wrap.tv-wrap{ max-width: min(98vw, 2200px); }
+  .tv-wrap #content{ flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 2.4rem 3rem; }
+  .tv-wrap .br-header{ padding: 1.2rem 1.6rem; }
+  .tv-wrap .br-header img{ width: 68px; }
+  .tv-wrap .br-header h1{ font-size: clamp(1.8rem, 3vw, 2.8rem); }
+  .tv-wrap .br-header-sub{ font-size: 0.85rem; }
+  .tv-wrap .br-qcount{ font-size: 1.3rem; margin-bottom: 1rem; }
+  .tv-wrap .br-tables{ gap: 2rem; margin: 1.6rem 0; }
+  .tv-wrap .br-team-card{ padding: 1.6rem 2.2rem; min-width: 230px; }
+  .tv-wrap .br-team-name{ font-size: 1.7rem; }
+  .tv-wrap .br-team-score{ font-size: 2.7rem; }
+  .tv-wrap .br-team-members{ font-size: 1.05rem; }
+  .tv-wrap .status-text{ font-size: 1.8rem; margin: 1.8rem 0; }
+  .tv-wrap .br-waiting-whoanswer{ font-size: 1.3rem; }
+  .tv-wrap .br-answerer{ font-size: 2.1rem; }
+  .tv-wrap .br-judge-banner{ font-size: 2.2rem; padding: 1.3rem; }
+  .tv-wrap .br-live-count{ font-size: 1.3rem; }
   h1{ font-family: 'Fraunces', serif; font-weight: 700; text-align: center; margin: 0; font-size: clamp(1.4rem, 4vw, 2.2rem); }
 
   /* --- шапка з гербом навчального закладу --- */
@@ -104,29 +123,30 @@
   .br-stage{ text-align:center; padding: 1.5rem 0; }
   .br-qcount{ font-family:'IBM Plex Mono',monospace; font-size:0.85rem; color:var(--ink-muted); text-align:center; margin-bottom: 0.6rem; }
 
-  /* --- барабан з конвертами --- */
-  .br-drum-wrap{ width: 280px; height: 280px; margin: 0 auto 1rem; position: relative; }
+  /* --- барабан з конвертами (базовий розмір — для великого ТВ-екрана;
+     капітан на телефоні отримує куди менший варіант через .small) --- */
+  .br-drum-wrap{ width: 460px; height: 460px; margin: 0 auto 1rem; position: relative; }
   .br-drum-wrap.small{ width: 170px; height: 170px; }
   .br-drum{
     width: 100%; height: 100%; border-radius: 50%; position: relative;
     background: radial-gradient(circle at 35% 30%, #2A4D86, var(--navy) 72%);
-    border: 7px solid var(--gold);
-    box-shadow: 0 10px 30px rgba(8,19,39,0.4), inset 0 0 24px rgba(0,0,0,0.35);
+    border: 10px solid var(--gold);
+    box-shadow: 0 14px 40px rgba(8,19,39,0.45), inset 0 0 32px rgba(0,0,0,0.35);
     display: flex; align-items: center; justify-content: center;
   }
   .br-drum.spinning{ animation: br-drum-spin 0.55s linear infinite; }
   @keyframes br-drum-spin{ from{ transform: rotate(0deg); } to{ transform: rotate(360deg); } }
   .br-drum-env{
-    position: absolute; top: 50%; left: 50%; width: 44px; height: 32px; margin: -16px 0 0 -22px;
-    background: linear-gradient(160deg, #FBF6E8, #EADFBB); border-radius: 4px; border: 1px solid #B9924A;
+    position: absolute; top: 50%; left: 50%; width: 62px; height: 46px; margin: -23px 0 0 -31px;
+    background: linear-gradient(160deg, #FBF6E8, #EADFBB); border-radius: 5px; border: 1px solid #B9924A;
     display: flex; align-items: center; justify-content: center;
-    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size: 0.8rem; color: #5B3E12;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size: 1.05rem; color: #5B3E12;
+    box-shadow: 0 3px 7px rgba(0,0,0,0.3);
   }
-  .br-drum-env.bb{ background: linear-gradient(160deg, #2A2616, #0B0A05 75%); border-color: #0B0A05; color: #F4D98B; font-size: 0.7rem; }
+  .br-drum-env.bb{ background: linear-gradient(160deg, #2A2616, #0B0A05 75%); border-color: #0B0A05; color: #F4D98B; font-size: 0.95rem; }
   .br-drum-wrap.small .br-drum-env{ width: 28px; height: 20px; margin: -10px 0 0 -14px; font-size: 0.6rem; }
   .br-drum-wrap.small .br-drum-env.bb{ font-size: 0.52rem; }
-  .br-drum-center{ font-size: 2.6rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+  .br-drum-center{ font-size: 4.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
   .br-drum-wrap.small .br-drum-center{ font-size: 1.6rem; }
   .br-drum-caption{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--ink-muted); margin-top: -0.4rem; }
 
@@ -135,6 +155,9 @@
     border-radius: 18px; padding: 2.1rem 2.6rem; font-family:'Fraunces',serif; font-weight:700;
     font-size: clamp(1.9rem, 4.2vw, 2.8rem); border: 3px solid #0B0A05;
     animation: br-box-glow 1.6s ease-in-out infinite;
+  }
+  .tv-wrap .br-blackbox{
+    border-radius: 22px; padding: 3rem 4.2rem; font-size: clamp(2.8rem, 6.5vw, 5rem); border-width: 4px;
   }
   .br-blackbox .bb-icon{ display:block; font-size: 1.5em; margin-bottom: 0.3rem; }
   @keyframes br-box-glow{
@@ -308,7 +331,7 @@
     opts = opts || {};
     var order = opts.order || [];
     var n = order.length || opts.envelopes || 10;
-    var radius = opts.small ? 62 : 108;
+    var radius = opts.small ? 62 : 178;
     var envs = '';
     var qNum = 0, bbNum = 0;
     for (var i = 0; i < n; i++) {
@@ -616,7 +639,7 @@
           var allTeams = await getJson(TEAMS_URL);
           teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, captainId: t.captainId, score: t.score || 0 }; }) : [];
         }
-        var key = JSON.stringify([meta && meta.phase, meta && meta.gameId, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentId, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), me && me.teamId, me && me.role, teams.map(function(t){return t.id+':'+t.score;}).join(','), students.length]);
+        var key = JSON.stringify([meta && meta.phase, meta && meta.gameId, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentId, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), me && me.teamId, me && me.role, teams.map(function(t){return t.id+':'+t.score;}).join(','), students.map(function(s){ return s.id+':'+s.teamId+':'+s.role; }).join(',')]);
         if (key !== lastKey) { lastKey = key; render(meta, me, teams, students); }
       } catch (err) { console.error('poll error', err); }
       polling = false;
@@ -629,14 +652,14 @@
 
   /* ================= TV VIEW ================= */
   function tvInit(){
-    appWrap.className = 'wrap';
+    appWrap.className = 'wrap tv-wrap';
     var lastKey = null;
     var polling = false;
 
     function joinBlockHtml(){
       var url = STUDENT_URL;
-      var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(url);
-      return '<div class="join"><img src="' + qr + '" width="160" height="160" alt="QR"><div><p class="link">' + esc(url) + '</p><button class="btn ghost copy-link-btn" data-url="' + esc(url) + '">Скопіювати лінк</button></div></div>';
+      var qr = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(url);
+      return '<div class="join"><img src="' + qr + '" width="280" height="280" alt="QR"><div><p class="link" style="font-size:1.3rem;">' + esc(url) + '</p><button class="btn ghost copy-link-btn" data-url="' + esc(url) + '" style="font-size:1.05rem; padding:0.8rem 1.3rem;">Скопіювати лінк</button></div></div>';
     }
 
     function bindCopy(){
@@ -699,7 +722,7 @@
         } else if (meta.roundState === 'spinning') {
           html2 += drumHtml({ spinning: true, order: meta.order }) + '<p class="status-text">Команда «' + esc(spinTeam ? spinTeam.name : '') + '» крутить барабан...</p>';
         } else {
-          html2 += q.isBlackBox ? '<div class="br-blackbox"><span class="bb-icon">📦</span>ЧОРНИЙ ЯЩИК</div>' : '<div class="tv-question" style="font-size:clamp(1.8rem,4vw,3rem);">' + esc(q.text) + '</div>';
+          html2 += q.isBlackBox ? '<div class="br-blackbox"><span class="bb-icon">📦</span>ЧОРНИЙ ЯЩИК</div>' : '<div class="tv-question" style="font-size:clamp(2.6rem,5.5vw,5.2rem); line-height:1.25;">' + esc(q.text) + '</div>';
           if (meta.roundState === 'revealed') {
             html2 += '<p class="br-waiting-whoanswer">Хто першим натисне — відповідає!</p>';
             if ((meta.triedTeamIds || []).length) {
@@ -731,7 +754,7 @@
         var students = allStudents ? Object.keys(allStudents).map(function(id){ var s = allStudents[id] || {}; return { id: id, name: s.name, role: s.role || null, teamId: s.teamId || null }; }) : [];
         var allTeams = await getJson(TEAMS_URL);
         var teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, score: t.score || 0 }; }) : [];
-        var key = JSON.stringify([meta && meta.phase, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentName, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), students.length, teams.map(function(t){ return t.id + ':' + t.score; }).join(',')]);
+        var key = JSON.stringify([meta && meta.phase, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentName, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), teams.map(function(t){ return t.id + ':' + t.score; }).join(','), students.map(function(s){ return s.id + ':' + s.teamId + ':' + s.role; }).join(',')]);
         if (key !== lastKey) { lastKey = key; render(meta, students, teams); }
       } catch (err) { console.error('tv poll error', err); }
       polling = false;
@@ -753,6 +776,12 @@
     // наприклад, якщо вчитель позначив капітанів, помилився з кількістю команд і не
     // встиг виправити це за секунду. Памʼятаємо вибір тут, як і стан <details> нижче.
     var checkedCaptainIds = {};
+    // Те саме для числових полів "Кількість команд" і "Кількість питань у грі":
+    // це НЕ <input>, у якому курсор зараз стоїть (той випадок уже захищений окремо
+    // в renderGamePanel), а поле, яке вчитель ввів і ВІДІЙШОВ від нього (клікнув
+    // чекбокс капітана, кнопку тощо) — без цього стану наступний опитувальний
+    // перемальовок за секунду тихо повертав би туди авто-пораховане значення.
+    var manualTeamCount = null, manualQCount = null;
 
     function pinScreen(){
       content.innerHTML = '<p class="muted" style="margin-bottom:1rem;">Режим викладача — введіть PIN</p>' +
@@ -804,7 +833,7 @@
 
     function lobbyPanelHtml(students){
       var sorted = students.slice().sort(function(a, b){ return (a.name || '').localeCompare(b.name || ''); });
-      var suggested = suggestTeamCount(students.length);
+      var suggested = manualTeamCount != null ? manualTeamCount : suggestTeamCount(students.length);
       var html = '<h2>Крок 1 — Реєстрація та капітани</h2><p class="admin-count">Зареєстровано: <b>' + students.length + '</b></p>';
       if (!sorted.length) {
         html += '<p class="muted">Учні ще не реєструвались — покажіть їм лінк/QR на екрані проєктора (?tv).</p>';
@@ -822,13 +851,14 @@
     function teamsPanelHtml(meta, students, teams){
       var unassigned = students.filter(function(s){ return !s.teamId; });
       var activeQCount = Math.max(1, Object.keys(questionsCache).filter(function(id){ return questionsCache[id].active !== false; }).length);
+      var qcountVal = manualQCount != null ? manualQCount : activeQCount;
       var html = '<h2>Крок 2 — Формування команд</h2>';
       html += '<div class="admin-teams-grid">' + teams.map(function(t){
         var mem = students.filter(function(s){ return s.teamId === t.id; });
         return '<div class="admin-team-box"><h3>' + esc(t.name) + '</h3><ul>' + mem.map(function(m){ return '<li>' + esc(m.name) + (m.role === 'captain' ? ' (капітан)' : '') + '</li>'; }).join('') + '</ul></div>';
       }).join('') + '</div>';
       html += '<p class="admin-count">Ще не обрали команду: ' + unassigned.length + (unassigned.length ? (' — ' + unassigned.map(function(s){ return esc(s.name); }).join(', ')) : '') + '</p>';
-      html += '<div class="admin-add-row"><label>Кількість питань у грі:&nbsp;</label><input type="number" id="qcount-input" min="1" value="' + activeQCount + '"></div>';
+      html += '<div class="admin-add-row"><label>Кількість питань у грі:&nbsp;</label><input type="number" id="qcount-input" min="1" value="' + qcountVal + '"></div>';
       html += '<div class="admin-judge-row"><button class="btn gold" id="start-game-btn" type="button">Почати гру</button><button class="btn ghost small" id="back-to-lobby-btn" type="button">← Змінити капітанів</button></div>';
       return html;
     }
@@ -952,6 +982,15 @@
         });
       });
 
+      var teamCountInputEl = document.getElementById('team-count-input');
+      if (teamCountInputEl) teamCountInputEl.addEventListener('input', function(){
+        manualTeamCount = parseInt(teamCountInputEl.value, 10) || 0;
+      });
+      var qcountInputEl = document.getElementById('qcount-input');
+      if (qcountInputEl) qcountInputEl.addEventListener('input', function(){
+        manualQCount = parseInt(qcountInputEl.value, 10) || 0;
+      });
+
       var formTeamsBtn = document.getElementById('form-teams-btn');
       if (formTeamsBtn) formTeamsBtn.addEventListener('click', async function(){
         var checked = Array.prototype.slice.call(document.querySelectorAll('.captain-check:checked'));
@@ -974,6 +1013,7 @@
         var ok3 = await patchJson(META_URL, { phase: 'teams', teamCount: wantCount });
         gameErrorMsg = (ok1 && ok2 && ok3) ? '' : 'Не вдалося зберегти формування команд у базі — перевірте з’єднання і спробуйте ще раз.';
         checkedCaptainIds = {};
+        manualTeamCount = null;
         pollGame();
       });
 
@@ -1042,6 +1082,7 @@
         await Promise.all([delJson(STUDENTS_URL), delJson(TEAMS_URL), delJson(BUZZES_URL)]);
         await putJson(META_URL, { phase: 'lobby', gameId: gid(), teamCount: 0, currentIndex: 0, roundState: 'idle' });
         checkedCaptainIds = {};
+        manualTeamCount = null; manualQCount = null;
         pollGame();
       });
     }
