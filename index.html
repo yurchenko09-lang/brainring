@@ -101,6 +101,19 @@
   .br-question-box{ font-family:'Fraunces',serif; font-weight:600; font-size: 1.25rem; text-align:center; margin: 1rem 0; line-height:1.4; }
   .br-mini-score{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:0.85rem; color:var(--ink-muted); margin-bottom: 0.6rem; }
 
+  /* --- team chat (visible only to own team) --- */
+  .team-chat{ margin: 1rem 0; border: 1px solid var(--line); border-radius: 10px; background: var(--card); overflow: hidden; }
+  .team-chat summary{ cursor: pointer; padding: 0.7rem 1rem; font-family:'IBM Plex Mono',monospace; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; user-select: none; }
+  .chat-badge{ background: var(--myth); color: #fff; border-radius: 999px; font-size: 0.68rem; padding: 0.1rem 0.5rem; display: none; }
+  .chat-messages{ max-height: 180px; overflow-y: auto; padding: 0.6rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; border-top: 1px solid var(--line); }
+  .chat-msg{ font-size: 0.9rem; line-height: 1.35; padding: 0.4rem 0.6rem; border-radius: 8px; background: var(--paper); word-break: break-word; }
+  .chat-msg.mine{ background: var(--accent); color: #fff; }
+  .chat-msg b{ font-weight: 600; }
+  .chat-empty{ font-size: 0.85rem; margin: 0.3rem 0; text-align: center; }
+  .chat-form{ display: flex; gap: 0.5rem; padding: 0.6rem 1rem; border-top: 1px solid var(--line); }
+  .chat-form input[type=text]{ flex: 1; font-size: 0.9rem; padding: 0.55rem 0.7rem; }
+  .chat-form button{ flex-shrink: 0; }
+
   /* --- TV / projector --- */
   .join{ display: flex; align-items: center; gap: 1.2rem; justify-content: center; margin-top: 1.2rem; flex-wrap: wrap; }
   .join img{ border-radius: 8px; border: 1px solid var(--line); }
@@ -246,6 +259,9 @@
   var questionUrl = function(id){ return BASE + '/brainring/questions/' + id + '.json'; };
   var buzzesForRoundUrl = function(rk){ return BASE + '/brainring/buzzes/' + enc(rk) + '.json'; };
   var buzzEntryUrl = function(rk, teamId){ return BASE + '/brainring/buzzes/' + enc(rk) + '/' + teamId + '.json'; };
+  var TEAMCHAT_URL = BASE + '/brainring/teamchat.json';
+  var teamChatUrl = function(teamId){ return BASE + '/brainring/teamchat/' + teamId + '.json'; };
+  var teamChatMsgUrl = function(teamId, msgId){ return BASE + '/brainring/teamchat/' + teamId + '/' + msgId + '.json'; };
   var STUDENT_URL = location.origin + location.pathname;
   var PIN = '25';
   var SPIN_MS = 2500;
@@ -263,6 +279,7 @@
   function uid(){ return 's-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function tid(){ return 't-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function qid(){ return 'rq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function mid(){ return 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function gid(){ return 'g-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
   // Повертає розпарсений JSON, або undefined якщо запит НЕ ВДАВСЯ (мережа/сервер) —
@@ -442,6 +459,68 @@
     var myGameId = null;
     try { myGameId = localStorage.getItem('br-game-id'); } catch(e){}
 
+    // --- team chat (видиме лише членам власної команди; не зберігається після "Нова гра") ---
+    var chatTeamId = null, chatMessages = [], chatOpen = false, chatDraft = '', chatLastSeenCount = 0;
+
+    async function fetchChat(teamId){
+      var raw = await getJson(teamChatUrl(teamId));
+      var arr = raw ? Object.keys(raw).map(function(k){ var m = raw[k] || {}; return { id: k, senderId: m.senderId, senderName: m.senderName, text: m.text, at: m.at || 0 }; }) : [];
+      arr.sort(function(a, b){ return a.at - b.at; });
+      return arr;
+    }
+
+    function chatPanelHtml(){
+      return '<details class="team-chat"' + (chatOpen ? ' open' : '') + '>' +
+        '<summary>💬 Чат команди <span class="chat-badge" id="chat-badge"></span></summary>' +
+        '<div class="chat-messages" id="chat-messages"></div>' +
+        '<form class="chat-form" id="chat-form"><input type="text" id="chat-input" placeholder="Повідомлення команді…" maxlength="300" autocomplete="off" value="' + esc(chatDraft) + '"><button class="btn small" type="submit">➤</button></form>' +
+        '</details>';
+    }
+
+    function renderChatMessages(){
+      var list = document.getElementById('chat-messages');
+      if (!list) return;
+      if (!chatMessages.length) {
+        list.innerHTML = '<p class="muted chat-empty">Повідомлень ще немає — напишіть команді першими.</p>';
+      } else {
+        list.innerHTML = chatMessages.map(function(m){
+          return '<div class="chat-msg' + (m.senderId === myId ? ' mine' : '') + '"><b>' + esc(m.senderName || '') + ':</b> ' + esc(m.text || '') + '</div>';
+        }).join('');
+        list.scrollTop = list.scrollHeight;
+      }
+      var badge = document.getElementById('chat-badge');
+      if (badge) {
+        var unread = chatOpen ? 0 : Math.max(0, chatMessages.length - chatLastSeenCount);
+        if (unread > 0) { badge.textContent = String(unread); badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
+      }
+      if (chatOpen) chatLastSeenCount = chatMessages.length;
+    }
+
+    function bindChatEvents(){
+      var details = document.querySelector('.team-chat');
+      if (!details) return;
+      details.addEventListener('toggle', function(){
+        chatOpen = details.open;
+        renderChatMessages();
+      });
+      var input = document.getElementById('chat-input');
+      if (input) {
+        input.addEventListener('input', function(){ chatDraft = input.value; });
+        if (chatOpen) { input.focus(); var v = input.value; input.setSelectionRange(v.length, v.length); }
+      }
+      var form = document.getElementById('chat-form');
+      if (form) form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        var text = (input ? input.value : '').trim();
+        if (!text || !chatTeamId) return;
+        chatDraft = ''; if (input) { input.value = ''; input.disabled = true; }
+        await putJson(teamChatMsgUrl(chatTeamId, mid()), { senderId: myId, senderName: myName, text: text, at: Date.now() });
+        if (input) input.disabled = false;
+        chatMessages = await fetchChat(chatTeamId);
+        renderChatMessages();
+      });
+    }
+
     function clearRegistration(){
       try {
         localStorage.removeItem('br-student-id');
@@ -529,6 +608,7 @@
           html += '<p class="muted center">Склад (' + mates.length + '): ' + mates.map(function(s){ return esc(s.name) + (s.role==='captain' ? ' (капітан)' : ''); }).join(', ') + '</p>';
           html += '<p class="status-text">Очікуємо початку гри...</p>';
           if (me.role !== 'captain') html += '<p class="center"><a href="#" id="change-team-link" class="switch-link">обрати іншу команду</a></p>';
+          html += chatPanelHtml();
         }
         content.innerHTML = html;
         bindSwitchLink();
@@ -541,6 +621,7 @@
             poll();
           });
         });
+        if (me && me.teamId) { bindChatEvents(); renderChatMessages(); }
         return;
       }
 
@@ -588,6 +669,7 @@
             html += judgementBannerHtml(meta.lastJudgement);
           }
         }
+        html += chatPanelHtml();
         content.innerHTML = html;
         bindSwitchLink();
         var spinBtn = document.getElementById('spin-btn');
@@ -608,6 +690,7 @@
             await patchJson(META_URL, { answeringStudentId: btn.getAttribute('data-sid'), answeringStudentName: btn.getAttribute('data-sname') });
           });
         });
+        bindChatEvents(); renderChatMessages();
         return;
       }
 
@@ -639,8 +722,16 @@
           var allTeams = await getJson(TEAMS_URL);
           teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, captainId: t.captainId, score: t.score || 0 }; }) : [];
         }
+        var chatEligible = me && me.teamId && (meta.phase === 'teams' || meta.phase === 'playing');
+        if (chatEligible) {
+          if (chatTeamId !== me.teamId) { chatTeamId = me.teamId; chatMessages = []; chatOpen = false; chatDraft = ''; chatLastSeenCount = 0; }
+          chatMessages = await fetchChat(me.teamId);
+        } else {
+          chatTeamId = null; chatMessages = [];
+        }
         var key = JSON.stringify([meta && meta.phase, meta && meta.gameId, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentId, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), me && me.teamId, me && me.role, teams.map(function(t){return t.id+':'+t.score;}).join(','), students.map(function(s){ return s.id+':'+s.teamId+':'+s.role; }).join(',')]);
         if (key !== lastKey) { lastKey = key; render(meta, me, teams, students); }
+        else if (chatEligible) { renderChatMessages(); }
       } catch (err) { console.error('poll error', err); }
       polling = false;
     }
@@ -1052,7 +1143,7 @@
       var backBtn = document.getElementById('back-to-lobby-btn');
       if (backBtn) backBtn.addEventListener('click', async function(){
         if (!confirm('Повернутись до лобі? Поточні команди буде видалено (учні зможуть зареєструватись знову, якщо потрібно).')) return;
-        await delJson(TEAMS_URL);
+        await Promise.all([delJson(TEAMS_URL), delJson(TEAMCHAT_URL)]);
         var allStudents = await getJson(STUDENTS_URL);
         if (allStudents) {
           var resetPatch = {};
@@ -1111,7 +1202,7 @@
       var resetBtn = document.getElementById('reset-game-btn');
       if (resetBtn) resetBtn.addEventListener('click', async function(){
         if (!confirm('Повністю почати нову гру? Будуть видалені всі зареєстровані учасники, команди і рахунки (банк питань залишиться).')) return;
-        await Promise.all([delJson(STUDENTS_URL), delJson(TEAMS_URL), delJson(BUZZES_URL)]);
+        await Promise.all([delJson(STUDENTS_URL), delJson(TEAMS_URL), delJson(BUZZES_URL), delJson(TEAMCHAT_URL)]);
         await putJson(META_URL, { phase: 'lobby', gameId: gid(), teamCount: 0, currentIndex: 0, roundState: 'idle' });
         checkedCaptainIds = {};
         manualTeamCount = null; manualQCount = null;
