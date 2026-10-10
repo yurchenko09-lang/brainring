@@ -655,6 +655,13 @@
     appWrap.className = 'wrap tv-wrap';
     var lastKey = null;
     var polling = false;
+    // Якщо барабан щойно крутився на поточному питанні, тримаємо анімацію на
+    // екрані мінімум SPIN_MS від моменту старту (за серверним revealedAt) —
+    // навіть якщо наш цикл опитування підгальмував і сервер уже встиг
+    // просунутися до "revealed" чи далі. Без цього на завантаженій мережі
+    // (багато пристроїв одночасно опитують ту саму базу щосекунди) ТВ міг
+    // жодного разу не застати "spinning" і одразу показати питання.
+    var spinHoldKey = null, spinHoldUntil = 0;
 
     function joinBlockHtml(){
       var url = STUDENT_URL;
@@ -747,15 +754,34 @@
       try {
         var meta = await ensureGameInitialized();
         if (meta === undefined) { polling = false; return; }
-        await runDriverTick(meta);
-        meta = await getJson(META_URL); // перечитуємо — драйвер щойно міг змінити стан
-        if (meta === undefined) { polling = false; return; }
-        var allStudents = await getJson(STUDENTS_URL);
+        // Студентів і команди тягнемо паралельно (а не послідовно) -- на
+        // завантаженій мережі з купою пристроїв, що опитують базу щосекунди,
+        // це помітно скорочує тривалість одного циклу й зменшує лаг.
+        var pair = await Promise.all([ getJson(STUDENTS_URL), getJson(TEAMS_URL) ]);
+        var allStudents = pair[0], allTeams = pair[1];
         var students = allStudents ? Object.keys(allStudents).map(function(id){ var s = allStudents[id] || {}; return { id: id, name: s.name, role: s.role || null, teamId: s.teamId || null }; }) : [];
-        var allTeams = await getJson(TEAMS_URL);
         var teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, score: t.score || 0 }; }) : [];
-        var key = JSON.stringify([meta && meta.phase, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentName, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), teams.map(function(t){ return t.id + ':' + t.score; }).join(','), students.map(function(s){ return s.id + ':' + s.teamId + ':' + s.role; }).join(',')]);
-        if (key !== lastKey) { lastKey = key; render(meta, students, teams); }
+
+        var effMeta = meta;
+        if (meta && meta.phase === 'playing') {
+          var rk = brRoundKey(meta);
+          if (meta.roundState === 'spinning' && meta.revealedAt) {
+            spinHoldKey = rk; spinHoldUntil = meta.revealedAt;
+          } else if (rk === spinHoldKey && Date.now() < spinHoldUntil) {
+            effMeta = Object.assign({}, meta, { roundState: 'spinning' });
+          } else if (rk !== spinHoldKey) {
+            spinHoldKey = null; spinHoldUntil = 0;
+          }
+        }
+
+        var key = JSON.stringify([effMeta && effMeta.phase, effMeta && effMeta.currentIndex, effMeta && effMeta.roundState, effMeta && effMeta.spinnerTeamId, effMeta && effMeta.buzzedTeamId, effMeta && effMeta.answeringStudentName, effMeta && effMeta.lastJudgement, JSON.stringify(effMeta && effMeta.triedTeamIds), teams.map(function(t){ return t.id + ':' + t.score; }).join(','), students.map(function(s){ return s.id + ':' + s.teamId + ':' + s.role; }).join(',')]);
+        if (key !== lastKey) { lastKey = key; render(effMeta, students, teams); }
+
+        // Просуваємо фактичний стан на сервері (напр. spinning -> revealed після
+        // таймауту) ВЖЕ ПІСЛЯ рендеру цього тіку, не до нього — інакше, якщо наш
+        // власний цикл опитування трохи загальмував, ми самі «проковтнули» б
+        // перехід і жодного разу не показали анімацію барабана.
+        await runDriverTick(meta);
       } catch (err) { console.error('tv poll error', err); }
       polling = false;
     }
@@ -793,6 +819,8 @@
       });
     }
 
+    var pollingGame = false;
+
     function initShell(){
       content.innerHTML = '<a class="admin-back" href="?tv" target="_blank" rel="noopener">← Екран для проєктора (TV)</a>' +
         '<div id="game-panel" class="admin-section"></div>' +
@@ -809,18 +837,22 @@
 
     /* ---- game-flow panel ---- */
     async function pollGame(){
+      if (pollingGame) return;
+      pollingGame = true;
       try {
         var meta = await ensureGameInitialized();
-        if (meta === undefined) return;
-        await runDriverTick(meta);
-        meta = await getJson(META_URL);
-        if (meta === undefined) return;
-        var allStudents = await getJson(STUDENTS_URL);
+        if (meta === undefined) { pollingGame = false; return; }
+        var pair = await Promise.all([ getJson(STUDENTS_URL), getJson(TEAMS_URL) ]);
+        var allStudents = pair[0], allTeams = pair[1];
         var students = allStudents ? Object.keys(allStudents).map(function(id){ var s = allStudents[id] || {}; return { id: id, group: s.group, name: s.name, role: s.role || null, teamId: s.teamId || null }; }) : [];
-        var allTeams = await getJson(TEAMS_URL);
         var teams = allTeams ? Object.keys(allTeams).map(function(id){ var t = allTeams[id] || {}; return { id: id, name: t.name, captainId: t.captainId, score: t.score || 0 }; }) : [];
         renderGamePanel(meta, students, teams);
+        // Просуваємо стан (напр. spinning -> revealed) вже ПІСЛЯ рендеру —
+        // так само, як на ТВ-екрані (див. tvInit) — щоб короткі проміжні стани
+        // встигали бодай раз відобразитись, а не «проковтувались» тим самим тіком.
+        await runDriverTick(meta);
       } catch (e) { console.error('admin pollGame error', e); }
+      pollingGame = false;
     }
 
     function scoreboardHtml(teams){
