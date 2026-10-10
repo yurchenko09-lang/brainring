@@ -260,8 +260,11 @@
   var buzzesForRoundUrl = function(rk){ return BASE + '/brainring/buzzes/' + enc(rk) + '.json'; };
   var buzzEntryUrl = function(rk, teamId){ return BASE + '/brainring/buzzes/' + enc(rk) + '/' + teamId + '.json'; };
   var TEAMCHAT_URL = BASE + '/brainring/teamchat.json';
-  var teamChatUrl = function(teamId){ return BASE + '/brainring/teamchat/' + teamId + '.json'; };
-  var teamChatMsgUrl = function(teamId, msgId){ return BASE + '/brainring/teamchat/' + teamId + '/' + msgId + '.json'; };
+  // Чат прив'язаний не лише до команди, а й до "раунду" (lobby до старту гри,
+  // окреме питання під час гри) -- з новим питанням команда потрапляє в новий,
+  // порожній підшлях, а старе листування просто лишається не показаним в базі.
+  var teamChatUrl = function(teamId, roundKey){ return BASE + '/brainring/teamchat/' + teamId + '/' + enc(roundKey) + '.json'; };
+  var teamChatMsgUrl = function(teamId, roundKey, msgId){ return BASE + '/brainring/teamchat/' + teamId + '/' + enc(roundKey) + '/' + msgId + '.json'; };
   var STUDENT_URL = location.origin + location.pathname;
   var PIN = '25';
   var SPIN_MS = 2500;
@@ -466,12 +469,21 @@
     // повідомлення долітають за долі секунди. Якщо SSE з якоїсь причини не працює
     // (старий браузер, проксі в школі/коледжі блокує тривалі з'єднання) — автоматично
     // переходимо на старий спосіб: звичайне опитування раз на кілька секунд.
-    var chatTeamId = null, chatMessages = [], chatOpen = false, chatDraft = '', chatLastSeenCount = 0;
-    var chatStream = null, chatStreamTeamId = null, chatStreamOk = false;
+    // "Раунд" чату: 'lobby' поки триває формування команд, і окремий ключ на кожне
+    // питання під час гри ("gameId_q<номер>") -- з новим питанням команда потрапляє
+    // в абсолютно новий, порожній підшлях, тож чат виглядає щоразу "чистим".
+    function currentChatRoundKey(meta){
+      if (!meta) return 'lobby';
+      if (meta.phase === 'playing') return (meta.gameId || 'g') + '_q' + meta.currentIndex;
+      return 'lobby';
+    }
+
+    var chatTeamId = null, chatRoundKey = null, chatMessages = [], chatOpen = false, chatDraft = '', chatLastSeenCount = 0;
+    var chatStream = null, chatStreamId = null, chatStreamOk = false;
     var chatFallbackTimer = null;
 
-    async function fetchChat(teamId){
-      var raw = await getJson(teamChatUrl(teamId));
+    async function fetchChat(teamId, roundKey){
+      var raw = await getJson(teamChatUrl(teamId, roundKey));
       var arr = raw ? Object.keys(raw).map(function(k){ var m = raw[k] || {}; return { id: k, senderId: m.senderId, senderName: m.senderName, text: m.text, at: m.at || 0 }; }) : [];
       arr.sort(function(a, b){ return a.at - b.at; });
       return arr;
@@ -500,29 +512,30 @@
 
     function stopChatFallback(){ if (chatFallbackTimer) { clearInterval(chatFallbackTimer); chatFallbackTimer = null; } }
 
-    function startChatFallback(teamId){
+    function startChatFallback(teamId, roundKey){
       stopChatFallback();
       chatFallbackTimer = setInterval(async function(){
         if (chatStreamOk) return; // SSE живий — резервне опитування не потрібне
-        chatMessages = await fetchChat(teamId);
+        chatMessages = await fetchChat(teamId, roundKey);
         renderChatMessages();
       }, 1500);
     }
 
     function stopChatStream(){
       if (chatStream) { try { chatStream.close(); } catch(e){} }
-      chatStream = null; chatStreamTeamId = null; chatStreamOk = false;
+      chatStream = null; chatStreamId = null; chatStreamOk = false;
       stopChatFallback();
     }
 
-    function startChatStream(teamId){
-      if (chatStreamTeamId === teamId && (chatStream || chatFallbackTimer)) return;
+    function startChatStream(teamId, roundKey){
+      var id = teamId + '|' + roundKey;
+      if (chatStreamId === id && (chatStream || chatFallbackTimer)) return;
       stopChatStream();
-      chatStreamTeamId = teamId;
-      startChatFallback(teamId); // одразу страхуємось, поки SSE ще не підтвердив з'єднання
+      chatStreamId = id;
+      startChatFallback(teamId, roundKey); // одразу страхуємось, поки SSE ще не підтвердив з'єднання
       if (typeof EventSource === 'undefined') return; // немає підтримки -- лишаємось на резервному опитуванні
       try {
-        var es = new EventSource(teamChatUrl(teamId));
+        var es = new EventSource(teamChatUrl(teamId, roundKey));
         es.addEventListener('put', function(e){
           chatStreamOk = true;
           try { applyChatStreamEvent(JSON.parse(e.data)); } catch (err) {}
@@ -579,11 +592,11 @@
       if (form) form.addEventListener('submit', async function(e){
         e.preventDefault();
         var text = (input ? input.value : '').trim();
-        if (!text || !chatTeamId) return;
+        if (!text || !chatTeamId || !chatRoundKey) return;
         chatDraft = ''; if (input) { input.value = ''; input.disabled = true; }
-        await putJson(teamChatMsgUrl(chatTeamId, mid()), { senderId: myId, senderName: myName, text: text, at: Date.now() });
+        await putJson(teamChatMsgUrl(chatTeamId, chatRoundKey, mid()), { senderId: myId, senderName: myName, text: text, at: Date.now() });
         if (input) input.disabled = false;
-        chatMessages = await fetchChat(chatTeamId);
+        chatMessages = await fetchChat(chatTeamId, chatRoundKey);
         renderChatMessages();
       });
     }
@@ -791,10 +804,14 @@
         }
         var chatEligible = me && me.teamId && (meta.phase === 'teams' || meta.phase === 'playing');
         if (chatEligible) {
-          if (chatTeamId !== me.teamId) { chatTeamId = me.teamId; chatMessages = []; chatOpen = false; chatDraft = ''; chatLastSeenCount = 0; }
-          startChatStream(me.teamId); // живий потік повідомлень; сам тримає себе в актуальному стані
+          var newRoundKey = currentChatRoundKey(meta);
+          if (chatTeamId !== me.teamId || chatRoundKey !== newRoundKey) {
+            chatTeamId = me.teamId; chatRoundKey = newRoundKey;
+            chatMessages = []; chatOpen = false; chatDraft = ''; chatLastSeenCount = 0;
+          }
+          startChatStream(me.teamId, chatRoundKey); // живий потік повідомлень; сам тримає себе в актуальному стані
         } else if (chatTeamId !== null) {
-          chatTeamId = null; chatMessages = []; stopChatStream();
+          chatTeamId = null; chatRoundKey = null; chatMessages = []; stopChatStream();
         }
         var key = JSON.stringify([meta && meta.phase, meta && meta.gameId, meta && meta.currentIndex, meta && meta.roundState, meta && meta.spinnerTeamId, meta && meta.buzzedTeamId, meta && meta.answeringStudentId, meta && meta.lastJudgement, JSON.stringify(meta && meta.triedTeamIds), me && me.teamId, me && me.role, teams.map(function(t){return t.id+':'+t.score;}).join(','), students.map(function(s){ return s.id+':'+s.teamId+':'+s.role; }).join(',')]);
         if (key !== lastKey) { lastKey = key; render(meta, me, teams, students); }
