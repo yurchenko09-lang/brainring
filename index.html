@@ -1126,6 +1126,8 @@
       return s === 'true' || s === '1' || s === 'так' || s === 'yes' || s === 'y' || s === 'чорний ящик' || s === 'blackbox';
     }
 
+    function normQText(t){ return String(t == null ? '' : t).trim().toLowerCase().replace(/\s+/g, ' '); }
+
     function normalizeQItem(raw){
       if (!raw || typeof raw !== 'object') return null;
       var text = String(raw.text != null ? raw.text : (raw.question != null ? raw.question : (raw['питання'] != null ? raw['питання'] : ''))).trim();
@@ -1255,6 +1257,8 @@
         var textEl = document.getElementById('add-text');
         var text = textEl.value.trim();
         if (!text) { textEl.focus(); return; }
+        var dupId = Object.keys(questionsCache).find(function(id){ return normQText(questionsCache[id].text) === normQText(text); });
+        if (dupId && !confirm('Таке питання вже є в банку. Додати ще одну копію?')) { return; }
         var isBlackBox = document.getElementById('add-blackbox').checked;
         var explain = document.getElementById('add-explain').value.trim();
         addBtn.disabled = true;
@@ -1284,11 +1288,23 @@
           var text = await file.text();
           var items = (/\.json$/i.test(file.name) || /json/.test(file.type)) ? parseQItemsJson(text) : parseQItemsCsv(text);
           if (!items.length) { lastImportStatus = 'У файлі не знайдено жодного коректного питання.'; importOpen = true; renderQBank(filterText); return; }
-          var patch = {};
-          items.forEach(function(item, i){ patch[qid() + '-' + i] = { text: item.text, isBlackBox: item.isBlackBox, explain: item.explain, active: true, createdAt: Date.now() + i }; });
+          var existingTexts = {};
+          Object.keys(questionsCache).forEach(function(id){ existingTexts[normQText(questionsCache[id].text)] = true; });
+          var patch = {}; var added = 0; var skipped = 0; var seenInBatch = {};
+          items.forEach(function(item, i){
+            var key = normQText(item.text);
+            if (existingTexts[key] || seenInBatch[key]) { skipped++; return; }
+            seenInBatch[key] = true;
+            patch[qid() + '-' + i] = { text: item.text, isBlackBox: item.isBlackBox, explain: item.explain, active: true, createdAt: Date.now() + i };
+            added++;
+          });
+          if (!added) { lastImportStatus = 'Нічого не додано — усі ' + skipped + ' питання з файлу вже є в банку (дублі пропущено).'; importOpen = true; renderQBank(filterText); return; }
           var ok = await patchJson(QUESTIONS_URL, patch);
           importOpen = true;
-          if (ok) { Object.assign(questionsCache, patch); lastImportStatus = 'Додано питань: ' + items.length + '.'; }
+          if (ok) {
+            Object.assign(questionsCache, patch);
+            lastImportStatus = 'Додано питань: ' + added + '.' + (skipped ? ' Пропущено дублів: ' + skipped + '.' : '');
+          }
           else { lastImportStatus = 'Не вдалося зберегти питання в базі — перевірте з’єднання чи правила доступу Firebase.'; }
         } catch (err) { lastImportStatus = 'Помилка читання файлу: ' + err.message; importOpen = true; }
         fileInput.value = '';
