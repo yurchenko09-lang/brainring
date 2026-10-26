@@ -221,6 +221,22 @@
   table.admin-table td.admin-cell-actions{ white-space: nowrap; }
   table.admin-table tr.inactive-row td.admin-cell-text, table.admin-table tr.inactive-row td.admin-cell-explain{ color: var(--ink-muted); }
 
+  #admin-pkg-filter, #add-pkg-select, #import-pkg-select, #start-pkg-select, select.row-pkg-select{
+    font-family: 'Source Sans 3', sans-serif; font-size: 0.88rem; padding: 0.35rem 0.5rem; border-radius: 4px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  }
+  .admin-pkg-list{ display: flex; flex-direction: column; gap: 0.6rem; }
+  .admin-pkg-box{ border: 1px solid var(--line); border-radius: 8px; padding: 0.7rem 0.9rem; background: var(--paper); }
+  .admin-pkg-box-head{ display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .admin-pkg-box-head h3{ margin: 0; font-family: 'Fraunces', serif; font-size: 1.02rem; }
+  .admin-pkg-meta{ font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--ink-muted); margin: 0.1rem 0 0.5rem; }
+  .pkg-chip-row{ display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.3rem 0 0.5rem; }
+  .pkg-chip{ display: inline-flex; align-items: center; gap: 0.35rem; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 0.15rem 0.35rem 0.15rem 0.7rem; font-size: 0.82rem; }
+  .pkg-chip button{ border: none; background: none; cursor: pointer; color: var(--ink-muted); font-size: 0.95rem; line-height: 1; padding: 0.1rem 0.3rem; }
+  .pkg-chip button:hover{ color: var(--myth); }
+  .admin-pkg-play-row{ display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  .admin-pkg-play-row input[type=text]{ flex: 1; min-width: 140px; width: auto; }
+
   .admin-captain-list{ display:flex; flex-direction:column; gap:0.4rem; max-height: 50vh; overflow-y:auto; margin-bottom: 0.8rem; }
   .admin-captain-row{ display:flex; align-items:center; gap:0.6rem; padding:0.35rem 0.5rem; border-radius:6px; }
   .admin-captain-row:hover{ background: var(--paper); }
@@ -257,6 +273,12 @@
   var teamUrl = function(id){ return BASE + '/brainring/teams/' + id + '.json'; };
   var teamScoreUrl = function(id){ return BASE + '/brainring/teams/' + id + '/score.json'; };
   var questionUrl = function(id){ return BASE + '/brainring/questions/' + id + '.json'; };
+  var QPACKAGES_URL = BASE + '/brainring/qpackages.json';
+  var packageUrl = function(id){ return BASE + '/brainring/qpackages/' + id + '.json'; };
+  // Хто з груп вже відіграв цей пакет — зберігаємо як окремі записи-події
+  // (а не просто список назв груп), щоб можна було додати ту саму назву групи
+  // двічі (різні пари) і прибрати конкретний запис, не зачіпаючи інші.
+  var packagePlayedUrl = function(pid, eid){ return BASE + '/brainring/qpackages/' + pid + '/playedGroups/' + eid + '.json'; };
   var buzzesForRoundUrl = function(rk){ return BASE + '/brainring/buzzes/' + enc(rk) + '.json'; };
   var buzzEntryUrl = function(rk, teamId){ return BASE + '/brainring/buzzes/' + enc(rk) + '/' + teamId + '.json'; };
   var TEAMCHAT_URL = BASE + '/brainring/teamchat.json';
@@ -282,6 +304,8 @@
   function uid(){ return 's-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function tid(){ return 't-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function qid(){ return 'rq-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function pkgid(){ return 'pk-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function pgid(){ return 'pg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function mid(){ return 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function gid(){ return 'g-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
@@ -967,10 +991,20 @@
   function adminInit(){
     appWrap.className = 'wrap admin-wrap';
     var questionsCache = {};
+    var packagesCache = {};
     var lastImportStatus = '';
-    var addOpen = false, importOpen = false;
+    var addOpen = false, importOpen = false, pkgAddOpen = false;
+    // Фільтр банку питань за пакетом: '' = усі, '__none__' = лише без пакету,
+    // інакше -- id конкретного пакету. Тримаємо в стані, бо select теж
+    // перемальовується опитувальним рендером game-панелі щосекунди.
+    var qbankPkgFilter = '';
     var adminError = '';
     var gameErrorMsg = '';
+    // Пакет, яким обмежено добірку питань на старті гри ('' = усі активні
+    // питання незалежно від пакету -- стара поведінка), і назва групи, що
+    // грає зараз (якщо вказана -- при натисканні "Почати гру" вона одразу
+    // позначається як та, що відіграла цей пакет).
+    var startPkgFilter = '', startPlayingGroup = '';
     // Game-панель перемальовується з опитуванням кожну секунду, тож без окремого
     // стану позначені прапорці капітанів "забувались" би вже на наступному тику —
     // наприклад, якщо вчитель позначив капітанів, помилився з кількістю команд і не
@@ -998,8 +1032,9 @@
     function initShell(){
       content.innerHTML = '<a class="admin-back" href="?tv" target="_blank" rel="noopener">← Екран для проєктора (TV)</a>' +
         '<div id="game-panel" class="admin-section"></div>' +
+        '<div id="qpackages-panel" class="admin-section"></div>' +
         '<div id="qbank-panel" class="admin-section"></div>';
-      loadQuestions().then(function(){ renderQBank(''); });
+      Promise.all([loadQuestions(), loadPackages()]).then(function(){ renderPackages(); renderQBank(''); });
       pollGame();
       setInterval(pollGame, 1000);
     }
@@ -1007,6 +1042,168 @@
     async function loadQuestions(){
       var all = await getJson(QUESTIONS_URL);
       questionsCache = all || {};
+    }
+
+    async function loadPackages(){
+      var all = await getJson(QPACKAGES_URL);
+      packagesCache = all || {};
+    }
+
+    function fmtDate(ts){
+      if (!ts) return '';
+      var d = new Date(ts);
+      function pad(n){ return (n < 10 ? '0' : '') + n; }
+      return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+    }
+
+    function questionCountForPackage(pid){
+      var total = 0, active = 0;
+      Object.keys(questionsCache).forEach(function(id){
+        var q = questionsCache[id];
+        if ((q.packageId || null) !== pid) return;
+        total++;
+        if (q.active !== false) active++;
+      });
+      return { active: active, total: total };
+    }
+
+    // Список <option> для вибору пакету. includeAll -- додати опцію "усі пакети"
+    // (для фільтра банку), includeNone -- додати опцію "без пакету".
+    function pkgOptionsHtml(selectedValue, includeAll, includeNone){
+      var html = '';
+      if (includeAll) html += '<option value=""' + (selectedValue === '' ? ' selected' : '') + '>Усі пакети</option>';
+      if (includeNone) html += '<option value="__none__"' + (selectedValue === '__none__' ? ' selected' : '') + '>Без пакету</option>';
+      Object.keys(packagesCache).sort(function(a, b){ return (packagesCache[a].createdAt || 0) - (packagesCache[b].createdAt || 0); }).forEach(function(pid){
+        var pkg = packagesCache[pid];
+        html += '<option value="' + esc(pid) + '"' + (selectedValue === pid ? ' selected' : '') + '>' + esc(pkg.name || '(без назви)') + (pkg.subject ? ' — ' + esc(pkg.subject) : '') + '</option>';
+      });
+      return html;
+    }
+
+    async function markPackagePlayed(pid, group){
+      group = (group || '').trim();
+      if (!pid || !group) return false;
+      return await putJson(packagePlayedUrl(pid, pgid()), { group: group, playedAt: Date.now() });
+    }
+
+    function renderPackages(){
+      var panel = document.getElementById('qpackages-panel');
+      if (!panel) return;
+      var active = document.activeElement;
+      if (active && panel.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) return;
+
+      var pids = Object.keys(packagesCache).sort(function(a, b){ return (packagesCache[a].createdAt || 0) - (packagesCache[b].createdAt || 0); });
+      var html = '<h2>Пакети питань</h2>';
+      html += '<p class="muted" style="margin-top:-0.3rem;">Групуйте питання в пакети (предмет + дата створення) і позначайте, які групи вже їх відіграли — щоб легко обирати на старті гри пакет, який конкретна група ще не бачила.</p>';
+
+      html += '<details class="admin-add"' + (pkgAddOpen ? ' open' : '') + '><summary>+ Створити новий пакет</summary><div class="admin-add-form">' +
+        '<div class="admin-add-row"><input type="text" id="pkg-name-input" placeholder="Назва пакету (напр. «БЖД — складні»)">' +
+        '<input type="text" id="pkg-subject-input" placeholder="Предмет (напр. БЖД)">' +
+        '<button class="btn" id="create-pkg-btn" type="button">Створити</button></div>' +
+        '</div></details>';
+
+      if (!pids.length) {
+        html += '<p class="muted">Пакетів ще немає — створіть перший вище, а потім прив’язуйте до нього питання в банку нижче.</p>';
+      } else {
+        html += '<div class="admin-pkg-list">';
+        pids.forEach(function(pid){
+          var pkg = packagesCache[pid];
+          var counts = questionCountForPackage(pid);
+          var played = pkg.playedGroups || {};
+          var eids = Object.keys(played).sort(function(a, b){ return (played[a].playedAt || 0) - (played[b].playedAt || 0); });
+          html += '<div class="admin-pkg-box" data-pkgid="' + esc(pid) + '">' +
+            '<div class="admin-pkg-box-head"><h3>' + esc(pkg.name || '(без назви)') + '</h3>' +
+            '<button class="btn danger small delete-pkg-btn" type="button">Видалити пакет</button></div>' +
+            '<p class="admin-pkg-meta">' + (pkg.subject ? esc(pkg.subject) + ' · ' : '') + 'створено ' + fmtDate(pkg.createdAt) + ' · питань: ' + counts.active + ' з ' + counts.total + '</p>';
+          html += '<div class="pkg-chip-row">';
+          if (!eids.length) html += '<span class="muted" style="font-size:0.82rem;">Ще жодна група не грала цей пакет.</span>';
+          eids.forEach(function(eid){
+            html += '<span class="pkg-chip">' + esc(played[eid].group) + '<button class="remove-played-btn" type="button" data-eid="' + esc(eid) + '" title="Прибрати позначку">×</button></span>';
+          });
+          html += '</div>';
+          html += '<div class="admin-pkg-play-row"><input type="text" class="pkg-played-group-input" placeholder="Назва групи (напр. 101)">' +
+            '<button class="btn ghost small mark-played-btn" type="button">+ зіграла цей пакет</button></div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      panel.innerHTML = html;
+      bindPackagesEvents();
+    }
+
+    function bindPackagesEvents(){
+      var pkgAddDetails = document.querySelector('#qpackages-panel details.admin-add');
+      if (pkgAddDetails) pkgAddDetails.addEventListener('toggle', function(){ pkgAddOpen = pkgAddDetails.open; });
+
+      var createPkgBtn = document.getElementById('create-pkg-btn');
+      if (createPkgBtn) createPkgBtn.addEventListener('click', async function(){
+        var nameEl = document.getElementById('pkg-name-input');
+        var name = nameEl.value.trim();
+        if (!name) { nameEl.focus(); return; }
+        var subject = document.getElementById('pkg-subject-input').value.trim();
+        createPkgBtn.disabled = true;
+        var pid = pkgid();
+        var pkg = { name: name, subject: subject, createdAt: Date.now(), playedGroups: {} };
+        var ok = await putJson(packageUrl(pid), pkg);
+        pkgAddOpen = true;
+        if (ok) { packagesCache[pid] = pkg; adminError = ''; } else { adminError = 'Не вдалося створити пакет — перевірте з’єднання і спробуйте ще раз.'; }
+        renderPackages();
+        // Новий пакет має одразу з'явитись у фільтрі/селекторах банку питань нижче.
+        var curSearchEl = document.getElementById('admin-search');
+        renderQBank(curSearchEl ? curSearchEl.value : '');
+      });
+
+      document.querySelectorAll('.mark-played-btn').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          var box = btn.closest('.admin-pkg-box'); var pid = box.getAttribute('data-pkgid');
+          var input = box.querySelector('.pkg-played-group-input');
+          var group = input.value.trim();
+          if (!group) { input.focus(); return; }
+          btn.disabled = true;
+          var eid = pgid();
+          var entry = { group: group, playedAt: Date.now() };
+          var ok = await putJson(packagePlayedUrl(pid, eid), entry);
+          if (ok) {
+            if (!packagesCache[pid].playedGroups) packagesCache[pid].playedGroups = {};
+            packagesCache[pid].playedGroups[eid] = entry;
+            adminError = '';
+          } else { adminError = 'Не вдалося позначити групу — перевірте з’єднання і спробуйте ще раз.'; }
+          renderPackages();
+        });
+      });
+
+      document.querySelectorAll('.remove-played-btn').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          var box = btn.closest('.admin-pkg-box'); var pid = box.getAttribute('data-pkgid');
+          var eid = btn.getAttribute('data-eid');
+          var ok = await delJson(packagePlayedUrl(pid, eid));
+          if (ok) { if (packagesCache[pid] && packagesCache[pid].playedGroups) delete packagesCache[pid].playedGroups[eid]; adminError = ''; }
+          else { adminError = 'Не вдалося прибрати позначку — спробуйте ще раз.'; }
+          renderPackages();
+        });
+      });
+
+      document.querySelectorAll('.delete-pkg-btn').forEach(function(btn){
+        btn.addEventListener('click', async function(){
+          var box = btn.closest('.admin-pkg-box'); var pid = box.getAttribute('data-pkgid');
+          var counts = questionCountForPackage(pid);
+          var msg = 'Видалити цей пакет?' + (counts.total ? (' ' + counts.total + ' питання(-ь) стане без пакету (самі питання НЕ видаляються).') : '');
+          if (!confirm(msg)) return;
+          btn.disabled = true;
+          if (counts.total) {
+            var patch = {};
+            Object.keys(questionsCache).forEach(function(id){ if ((questionsCache[id].packageId || null) === pid) patch[id] = Object.assign({}, questionsCache[id], { packageId: null }); });
+            var ok1 = await patchJson(QUESTIONS_URL, patch);
+            if (ok1) Object.keys(patch).forEach(function(id){ questionsCache[id].packageId = null; });
+          }
+          var ok2 = await delJson(packageUrl(pid));
+          if (ok2) { delete packagesCache[pid]; if (qbankPkgFilter === pid) qbankPkgFilter = ''; if (startPkgFilter === pid) startPkgFilter = ''; adminError = ''; }
+          else { adminError = 'Не вдалося видалити пакет — спробуйте ще раз.'; }
+          renderPackages();
+          var curSearchEl = document.getElementById('admin-search');
+          renderQBank(curSearchEl ? curSearchEl.value : '');
+        });
+      });
     }
 
     /* ---- game-flow panel ---- */
@@ -1056,7 +1253,11 @@
 
     function teamsPanelHtml(meta, students, teams){
       var unassigned = students.filter(function(s){ return !s.teamId; });
-      var activeQCount = Math.max(1, Object.keys(questionsCache).filter(function(id){ return questionsCache[id].active !== false; }).length);
+      var activeQCount = Math.max(1, Object.keys(questionsCache).filter(function(id){
+        if (questionsCache[id].active === false) return false;
+        if (!startPkgFilter) return true;
+        return (questionsCache[id].packageId || null) === startPkgFilter;
+      }).length);
       var qcountVal = manualQCount != null ? manualQCount : activeQCount;
       var html = '<h2>Крок 2 — Формування команд</h2>';
       html += '<div class="admin-teams-grid">' + teams.map(function(t){
@@ -1065,6 +1266,9 @@
       }).join('') + '</div>';
       html += '<p class="admin-count">Ще не обрали команду: ' + unassigned.length + (unassigned.length ? (' — ' + unassigned.map(function(s){ return esc(s.name); }).join(', ')) : '') + '</p>';
       html += '<div class="admin-add-row"><label>Кількість питань у грі:&nbsp;</label><input type="number" id="qcount-input" min="1" value="' + qcountVal + '"></div>';
+      html += '<div class="admin-add-row"><label>Пакет питань:&nbsp;<select id="start-pkg-select">' + pkgOptionsHtml(startPkgFilter, true, false) + '</select></label>' +
+        '<label>Яка група грає (необов’язково):&nbsp;<input type="text" id="start-playing-group" placeholder="напр. 101" value="' + esc(startPlayingGroup) + '"></label></div>';
+      html += '<p class="muted" style="margin:0 0 0.6rem;">Якщо обрати конкретний пакет і вказати групу — після старту гри пакет одразу позначиться як відіграний цією групою.</p>';
       html += '<div class="admin-judge-row"><button class="btn gold" id="start-game-btn" type="button">Почати гру</button><button class="btn ghost small" id="back-to-lobby-btn" type="button">← Змінити капітанів</button></div>';
       return html;
     }
@@ -1114,7 +1318,7 @@
       // кількість команд) — інакше щосекундний опитувальний рендер скидав би курсор
       // і введене значення.
       var active = document.activeElement;
-      if (active && panel.contains(active) && active.tagName === 'INPUT') return;
+      if (active && panel.contains(active) && (active.tagName === 'INPUT' || active.tagName === 'SELECT')) return;
 
       var html = '';
       if (gameErrorMsg) html += '<div class="admin-error">⚠ ' + esc(gameErrorMsg) + '</div>';
@@ -1196,6 +1400,15 @@
       if (qcountInputEl) qcountInputEl.addEventListener('input', function(){
         manualQCount = parseInt(qcountInputEl.value, 10) || 0;
       });
+      var startPkgSelectEl = document.getElementById('start-pkg-select');
+      if (startPkgSelectEl) startPkgSelectEl.addEventListener('change', function(){
+        startPkgFilter = startPkgSelectEl.value;
+        manualQCount = null; // новий пакет -- нехай кількість питань знову рахується від його розміру
+      });
+      var startPlayingGroupEl = document.getElementById('start-playing-group');
+      if (startPlayingGroupEl) startPlayingGroupEl.addEventListener('input', function(){
+        startPlayingGroup = startPlayingGroupEl.value;
+      });
 
       var formTeamsBtn = document.getElementById('form-teams-btn');
       if (formTeamsBtn) formTeamsBtn.addEventListener('click', async function(){
@@ -1241,10 +1454,19 @@
       var startGameBtn = document.getElementById('start-game-btn');
       if (startGameBtn) startGameBtn.addEventListener('click', async function(){
         startGameBtn.disabled = true;
+        var pkgSelectVal = (document.getElementById('start-pkg-select') || { value: startPkgFilter }).value;
         var activeQs = Object.keys(questionsCache)
-          .filter(function(id){ return questionsCache[id] && questionsCache[id].text && questionsCache[id].active !== false; })
+          .filter(function(id){
+            var q = questionsCache[id];
+            if (!q || !q.text || q.active === false) return false;
+            if (pkgSelectVal && (q.packageId || null) !== pkgSelectVal) return false;
+            return true;
+          })
           .map(function(id){ return { id: id, text: questionsCache[id].text, isBlackBox: !!questionsCache[id].isBlackBox, explain: questionsCache[id].explain || '' }; });
-        if (!activeQs.length) { gameErrorMsg = 'Немає жодного активного питання в банку — додайте питання нижче перед початком гри.'; renderGamePanel(meta, students, teams); return; }
+        if (!activeQs.length) {
+          gameErrorMsg = pkgSelectVal ? 'У вибраному пакеті немає активних питань — оберіть інший пакет або додайте питання в банку.' : 'Немає жодного активного питання в банку — додайте питання нижче перед початком гри.';
+          renderGamePanel(meta, students, teams); return;
+        }
         var qcountInput = document.getElementById('qcount-input');
         var n = Math.max(1, Math.min(activeQs.length, parseInt(qcountInput ? qcountInput.value : activeQs.length, 10) || activeQs.length));
         var order = randomOrder(activeQs, n);
@@ -1260,6 +1482,16 @@
           buzzedTeamId: null, buzzedAt: null, answeringStudentId: null, answeringStudentName: null,
           lastJudgement: null, revealedAt: null, triedTeamIds: [] });
         gameErrorMsg = ok ? '' : 'Не вдалося запустити гру — перевірте з’єднання і спробуйте ще раз.';
+        // Якщо грали конкретним пакетом і вказали групу -- одразу позначаємо його
+        // відіграним цією групою (не чекаючи, поки вчитель зробить це вручну нижче).
+        var groupInput = document.getElementById('start-playing-group');
+        var groupName = groupInput ? groupInput.value.trim() : '';
+        if (ok && pkgSelectVal && groupName) {
+          await markPackagePlayed(pkgSelectVal, groupName);
+          await loadPackages();
+          renderPackages();
+        }
+        startPlayingGroup = '';
         pollGame();
       });
 
@@ -1289,6 +1521,7 @@
         await putJson(META_URL, { phase: 'lobby', gameId: gid(), teamCount: 0, currentIndex: 0, roundState: 'idle' });
         checkedCaptainIds = {};
         manualTeamCount = null; manualQCount = null;
+        startPkgFilter = ''; startPlayingGroup = '';
         pollGame();
       });
     }
@@ -1373,30 +1606,39 @@
       var total = ids.length;
       var activeCount = ids.filter(function(id){ return questionsCache[id].active !== false; }).length;
       var filter = (filterText || '').trim().toLowerCase();
-      var shownIds = filter ? ids.filter(function(id){ return (questionsCache[id].text || '').toLowerCase().indexOf(filter) !== -1; }) : ids;
+      var byText = filter ? ids.filter(function(id){ return (questionsCache[id].text || '').toLowerCase().indexOf(filter) !== -1; }) : ids;
+      var shownIds = qbankPkgFilter ? byText.filter(function(id){
+        var pid = questionsCache[id].packageId || null;
+        return qbankPkgFilter === '__none__' ? !pid : pid === qbankPkgFilter;
+      }) : byText;
 
       var html = '<h2>Банк питань</h2>';
       if (adminError) html += '<div class="admin-error">⚠ ' + esc(adminError) + '</div>';
       html += '<div class="admin-toolbar"><p class="admin-count">Активних: <b>' + activeCount + '</b> із ' + total + '</p>' +
-        '<input type="text" id="admin-search" placeholder="Пошук по тексту питання…" value="' + esc(filterText || '') + '"></div>';
+        '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">' +
+        '<select id="admin-pkg-filter">' + pkgOptionsHtml(qbankPkgFilter, true, true) + '</select>' +
+        '<input type="text" id="admin-search" placeholder="Пошук по тексту питання…" value="' + esc(filterText || '') + '"></div></div>';
 
+      var defaultAddPkg = (qbankPkgFilter && qbankPkgFilter !== '__none__' && packagesCache[qbankPkgFilter]) ? qbankPkgFilter : '__none__';
       html += '<details class="admin-add"' + (addOpen ? ' open' : '') + '><summary>+ Додати нове питання</summary><div class="admin-add-form">' +
         '<textarea id="add-text" placeholder="Текст питання" rows="2"></textarea>' +
         '<div class="admin-add-row"><label><input type="checkbox" id="add-blackbox"> Чорний ящик</label>' +
         '<input type="text" id="add-explain" placeholder="Коментар для себе (необов’язково)">' +
+        '<label>Пакет:&nbsp;<select id="add-pkg-select">' + pkgOptionsHtml(defaultAddPkg, false, true) + '</select></label>' +
         '<button class="btn" id="add-q-btn" type="button">Додати</button></div>' +
         '</div></details>';
 
       html += '<details class="admin-import"' + (importOpen ? ' open' : '') + '><summary>⇪ Залити питання файлом (CSV або JSON)</summary><div class="admin-import-body">' +
         '<p class="muted" style="margin:0;">CSV: колонки <code>text</code>/<code>isBlackBox</code>/<code>explain</code> (або українською: <code>питання</code>/<code>чорний ящик</code>/<code>пояснення</code>), роздільник «,» або «;». JSON: масив об’єктів <code>{text, isBlackBox, explain}</code>.</p>' +
+        '<label>Пакет для всього файлу:&nbsp;<select id="import-pkg-select">' + pkgOptionsHtml(defaultAddPkg, false, true) + '</select></label>' +
         '<input type="file" id="import-file" accept=".csv,.json,text/csv,application/json">' +
         '<a id="sample-csv-link" download="приклад-питань-брейнринг.csv">Завантажити приклад CSV</a>' +
         '<p class="muted" id="import-status">' + esc(lastImportStatus) + '</p>' +
         '</div></details>';
 
-      html += '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Питання</th><th>Тип</th><th>Коментар</th><th>Активне</th><th></th></tr></thead><tbody>';
+      html += '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Питання</th><th>Тип</th><th>Коментар</th><th>Пакет</th><th>Активне</th><th></th></tr></thead><tbody>';
       if (!shownIds.length) {
-        html += '<tr><td colspan="5" class="muted" style="padding:1.2rem;text-align:center;">' + (total ? 'Нічого не знайдено за цим запитом.' : 'Питань ще немає — додайте перше вище.') + '</td></tr>';
+        html += '<tr><td colspan="6" class="muted" style="padding:1.2rem;text-align:center;">' + (total ? 'Нічого не знайдено за цим запитом.' : 'Питань ще немає — додайте перше вище.') + '</td></tr>';
       } else {
         shownIds.forEach(function(id){
           var q = questionsCache[id];
@@ -1405,6 +1647,7 @@
             '<td class="admin-cell-text" data-field="text">' + esc(q.text) + '</td>' +
             '<td class="admin-cell-answer" data-field="isBlackBox">' + (q.isBlackBox ? '📦 Чорний ящик' : 'Звичайне') + '</td>' +
             '<td class="admin-cell-explain" data-field="explain">' + esc(q.explain || '') + '</td>' +
+            '<td class="admin-cell-pkg"><select class="row-pkg-select" data-id="' + esc(id) + '">' + pkgOptionsHtml(q.packageId || '__none__', false, true) + '</select></td>' +
             '<td class="admin-cell-active"><input type="checkbox" class="active-toggle" ' + (active ? 'checked' : '') + '></td>' +
             '<td class="admin-cell-actions"><button class="btn ghost small edit-btn" type="button">Редагувати</button> <button class="btn danger small delete-btn" type="button">Видалити</button></td>' +
             '</tr>';
@@ -1421,10 +1664,16 @@
         searchInput.addEventListener('input', function(){ renderQBank(searchInput.value); });
         if (filterText) { searchInput.focus(); var v = searchInput.value; searchInput.setSelectionRange(v.length, v.length); }
       }
-      var addDetails = document.querySelector('details.admin-add');
+      var addDetails = document.querySelector('#qbank-panel details.admin-add');
       if (addDetails) addDetails.addEventListener('toggle', function(){ addOpen = addDetails.open; });
-      var importDetails = document.querySelector('details.admin-import');
+      var importDetails = document.querySelector('#qbank-panel details.admin-import');
       if (importDetails) importDetails.addEventListener('toggle', function(){ importOpen = importDetails.open; });
+
+      var pkgFilterSelect = document.getElementById('admin-pkg-filter');
+      if (pkgFilterSelect) pkgFilterSelect.addEventListener('change', function(){
+        qbankPkgFilter = pkgFilterSelect.value;
+        renderQBank(document.getElementById('admin-search') ? document.getElementById('admin-search').value : filterText);
+      });
 
       var addBtn = document.getElementById('add-q-btn');
       if (addBtn) addBtn.addEventListener('click', async function(){
@@ -1435,12 +1684,15 @@
         if (dupId && !confirm('Таке питання вже є в банку. Додати ще одну копію?')) { return; }
         var isBlackBox = document.getElementById('add-blackbox').checked;
         var explain = document.getElementById('add-explain').value.trim();
+        var addPkgSelect = document.getElementById('add-pkg-select');
+        var packageId = (addPkgSelect && addPkgSelect.value !== '__none__') ? addPkgSelect.value : null;
         addBtn.disabled = true;
         var id = qid();
-        var q = { text: text, isBlackBox: isBlackBox, explain: explain, active: true, createdAt: Date.now() };
+        var q = { text: text, isBlackBox: isBlackBox, explain: explain, packageId: packageId, active: true, createdAt: Date.now() };
         var ok = await putJson(questionUrl(id), q);
         addOpen = true;
         if (ok) { questionsCache[id] = q; adminError = ''; } else { adminError = 'Не вдалося зберегти питання в базі — перевірте з’єднання і спробуйте ще раз.'; }
+        renderPackages();
         renderQBank(filterText);
       });
 
@@ -1462,6 +1714,8 @@
           var text = await file.text();
           var items = (/\.json$/i.test(file.name) || /json/.test(file.type)) ? parseQItemsJson(text) : parseQItemsCsv(text);
           if (!items.length) { lastImportStatus = 'У файлі не знайдено жодного коректного питання.'; importOpen = true; renderQBank(filterText); return; }
+          var importPkgSelect = document.getElementById('import-pkg-select');
+          var importPackageId = (importPkgSelect && importPkgSelect.value !== '__none__') ? importPkgSelect.value : null;
           var existingTexts = {};
           Object.keys(questionsCache).forEach(function(id){ existingTexts[normQText(questionsCache[id].text)] = true; });
           var patch = {}; var added = 0; var skipped = 0; var seenInBatch = {};
@@ -1469,7 +1723,7 @@
             var key = normQText(item.text);
             if (existingTexts[key] || seenInBatch[key]) { skipped++; return; }
             seenInBatch[key] = true;
-            patch[qid() + '-' + i] = { text: item.text, isBlackBox: item.isBlackBox, explain: item.explain, active: true, createdAt: Date.now() + i };
+            patch[qid() + '-' + i] = { text: item.text, isBlackBox: item.isBlackBox, explain: item.explain, packageId: importPackageId, active: true, createdAt: Date.now() + i };
             added++;
           });
           if (!added) { lastImportStatus = 'Нічого не додано — усі ' + skipped + ' питання з файлу вже є в банку (дублі пропущено).'; importOpen = true; renderQBank(filterText); return; }
@@ -1482,6 +1736,7 @@
           else { lastImportStatus = 'Не вдалося зберегти питання в базі — перевірте з’єднання чи правила доступу Firebase.'; }
         } catch (err) { lastImportStatus = 'Помилка читання файлу: ' + err.message; importOpen = true; }
         fileInput.value = '';
+        renderPackages();
         renderQBank(filterText);
       });
 
@@ -1490,6 +1745,7 @@
           var tr = cb.closest('tr'); var id = tr.getAttribute('data-id');
           var ok = await patchJson(questionUrl(id), { active: cb.checked });
           if (ok) { questionsCache[id].active = cb.checked; adminError = ''; } else { cb.checked = !cb.checked; adminError = 'Не вдалося змінити статус питання в базі — спробуйте ще раз.'; }
+          renderPackages();
           renderQBank(filterText);
         });
       });
@@ -1500,6 +1756,19 @@
           if (!confirm('Видалити це питання?')) return;
           var ok = await delJson(questionUrl(id));
           if (ok) { delete questionsCache[id]; adminError = ''; } else { adminError = 'Не вдалося видалити питання з бази — спробуйте ще раз.'; }
+          renderPackages();
+          renderQBank(filterText);
+        });
+      });
+
+      document.querySelectorAll('select.row-pkg-select').forEach(function(sel){
+        sel.addEventListener('change', async function(){
+          var id = sel.getAttribute('data-id');
+          var packageId = sel.value !== '__none__' ? sel.value : null;
+          sel.disabled = true;
+          var ok = await patchJson(questionUrl(id), { packageId: packageId });
+          if (ok) { questionsCache[id].packageId = packageId; adminError = ''; } else { adminError = 'Не вдалося змінити пакет питання — спробуйте ще раз.'; }
+          renderPackages();
           renderQBank(filterText);
         });
       });
