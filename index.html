@@ -998,6 +998,14 @@
     // інакше -- id конкретного пакету. Тримаємо в стані, бо select теж
     // перемальовується опитувальним рендером game-панелі щосекунди.
     var qbankPkgFilter = '';
+    // Пакет, обраний саме у формах "+ Додати нове питання" і "Залити файлом" —
+    // доки адмін не обрав щось сам, обидва за замовчуванням слідують за
+    // qbankPkgFilter (фільтром банку вгорі). Але після того, як вибір зроблено
+    // явно, він має ПЕРЕЖИВАТИ перемальовок панелі після додавання/імпорту —
+    // інакше після успішного заливання файлу селект візуально "скидається" на
+    // "Без пакету", хоча саме заливання вже коректно прив'язало питання до
+    // обраного пакету, і це виглядає як баг, хоча ним не є.
+    var addPkgSelection = null, importPkgSelection = null;
     var adminError = '';
     var gameErrorMsg = '';
     // Пакет, яким обмежено добірку питань на старті гри ('' = усі активні
@@ -1620,17 +1628,21 @@
         '<input type="text" id="admin-search" placeholder="Пошук по тексту питання…" value="' + esc(filterText || '') + '"></div></div>';
 
       var defaultAddPkg = (qbankPkgFilter && qbankPkgFilter !== '__none__' && packagesCache[qbankPkgFilter]) ? qbankPkgFilter : '__none__';
+      // Якщо адмін уже явно щось обирав у цих двох селектах раніше (і цей пакет
+      // досі існує) -- показуємо саме це, а не щоразу відкочуємось до фільтра банку.
+      var addPkgValue = (addPkgSelection && (addPkgSelection === '__none__' || packagesCache[addPkgSelection])) ? addPkgSelection : defaultAddPkg;
+      var importPkgValue = (importPkgSelection && (importPkgSelection === '__none__' || packagesCache[importPkgSelection])) ? importPkgSelection : defaultAddPkg;
       html += '<details class="admin-add"' + (addOpen ? ' open' : '') + '><summary>+ Додати нове питання</summary><div class="admin-add-form">' +
         '<textarea id="add-text" placeholder="Текст питання" rows="2"></textarea>' +
         '<div class="admin-add-row"><label><input type="checkbox" id="add-blackbox"> Чорний ящик</label>' +
         '<input type="text" id="add-explain" placeholder="Коментар для себе (необов’язково)">' +
-        '<label>Пакет:&nbsp;<select id="add-pkg-select">' + pkgOptionsHtml(defaultAddPkg, false, true) + '</select></label>' +
+        '<label>Пакет:&nbsp;<select id="add-pkg-select">' + pkgOptionsHtml(addPkgValue, false, true) + '</select></label>' +
         '<button class="btn" id="add-q-btn" type="button">Додати</button></div>' +
         '</div></details>';
 
       html += '<details class="admin-import"' + (importOpen ? ' open' : '') + '><summary>⇪ Залити питання файлом (CSV або JSON)</summary><div class="admin-import-body">' +
         '<p class="muted" style="margin:0;">CSV: колонки <code>text</code>/<code>isBlackBox</code>/<code>explain</code> (або українською: <code>питання</code>/<code>чорний ящик</code>/<code>пояснення</code>), роздільник «,» або «;». JSON: масив об’єктів <code>{text, isBlackBox, explain}</code>.</p>' +
-        '<label>Пакет для всього файлу:&nbsp;<select id="import-pkg-select">' + pkgOptionsHtml(defaultAddPkg, false, true) + '</select></label>' +
+        '<label>Пакет для всього файлу:&nbsp;<select id="import-pkg-select">' + pkgOptionsHtml(importPkgValue, false, true) + '</select></label>' +
         '<input type="file" id="import-file" accept=".csv,.json,text/csv,application/json">' +
         '<a id="sample-csv-link" download="приклад-питань-брейнринг.csv">Завантажити приклад CSV</a>' +
         '<p class="muted" id="import-status">' + esc(lastImportStatus) + '</p>' +
@@ -1674,6 +1686,11 @@
         qbankPkgFilter = pkgFilterSelect.value;
         renderQBank(document.getElementById('admin-search') ? document.getElementById('admin-search').value : filterText);
       });
+
+      var addPkgSelect = document.getElementById('add-pkg-select');
+      if (addPkgSelect) addPkgSelect.addEventListener('change', function(){ addPkgSelection = addPkgSelect.value; });
+      var importPkgSelectEl = document.getElementById('import-pkg-select');
+      if (importPkgSelectEl) importPkgSelectEl.addEventListener('change', function(){ importPkgSelection = importPkgSelectEl.value; });
 
       var addBtn = document.getElementById('add-q-btn');
       if (addBtn) addBtn.addEventListener('click', async function(){
